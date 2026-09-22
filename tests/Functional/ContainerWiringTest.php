@@ -58,6 +58,9 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.shipment_canceller',
             'sarissaops_enviatodo.controller.admin.shipment_bulk',
             'sarissaops_enviatodo.twig.admin',
+            'sarissaops_enviatodo.pickup_api',
+            'sarissaops_enviatodo.pickup_scheduler',
+            'sarissaops_enviatodo.controller.admin.pickup',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }

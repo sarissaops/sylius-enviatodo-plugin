@@ -100,5 +100,21 @@
             <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
             <tag name="twig.extension" />
         </service>
+
+        <service id="sarissaops_enviatodo.pickup_api" class="SarissaOps\Enviatodo\Api\PickupApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="pickup" />
+        </service>
+
+        <service id="sarissaops_enviatodo.pickup_scheduler" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPickupScheduler">
+            <argument type="service" id="sarissaops_enviatodo.pickup_api" />
+            <argument type="service" id="logger" />
+            <argument>%sarissa_ops_sylius_enviatodo.pickup_auto_schedule%</argument>
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.pickup" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PickupController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.pickup_scheduler" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <tag name="controller.service_arguments" />
+        </service>
     </services>
 </container>

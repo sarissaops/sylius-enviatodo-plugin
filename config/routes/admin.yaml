@@ -5,3 +5,27 @@ sarissa_ops_sylius_enviatodo_admin_bulk_labels:
         _controller: sarissaops_enviatodo.controller.admin.shipment_bulk::bulkLabelsAction
         _sylius:
             section: admin
+
+sarissa_ops_sylius_enviatodo_admin_pickup_queue:
+    path: /admin/enviatodo/pickups/queue
+    methods: [GET]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.pickup::queueAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_pickup_create:
+    path: /admin/enviatodo/pickups
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.pickup::createAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_pickup_cancel:
+    path: /admin/enviatodo/pickups/{id}/cancel
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.pickup::cancelAction
+        _sylius:
+            section: admin
