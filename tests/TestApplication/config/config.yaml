@@ -2,6 +2,14 @@ imports:
     - { resource: "@SarissaOpsSyliusEnviatodoPlugin/config/config.yaml" }
     - { resource: "services_test.php" }
 
+# Test-only credentials: no live traffic is ever made from the harness.
+enviatodo:
+    token: 'test-token'
+
+sarissa_ops_sylius_enviatodo:
+    provider_map:
+        enviatodo_estafeta: { provider_id: '9', provider_service_id: '11' }
+
 twig:
     paths:
         '%kernel.project_dir%/../../../tests/TestApplication/templates': ~

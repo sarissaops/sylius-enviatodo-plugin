@@ -10,6 +10,38 @@
     </imports>
 
     <services>
-        <!-- Put your services here -->
+        <service id="sarissaops_enviatodo.provider_map" class="SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap">
+            <argument>%sarissa_ops_sylius_enviatodo.provider_map%</argument>
+        </service>
+
+        <service id="sarissaops_enviatodo.quote_api" class="SarissaOps\Enviatodo\Api\QuoteApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="quote" />
+        </service>
+
+        <service id="sarissaops_enviatodo.zip_code_api" class="SarissaOps\Enviatodo\Api\ZipCodeApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="zipCode" />
+        </service>
+
+        <service id="sarissaops_enviatodo.component_calculator" class="SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator">
+            <argument type="service" id="sarissaops_enviatodo.quote_api" />
+        </service>
+
+        <service id="sarissaops_enviatodo.shipping_calculator" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoShippingCalculator">
+            <argument type="service" id="sarissaops_enviatodo.component_calculator" />
+            <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <tag name="sylius.shipping_calculator" calculator="enviatodo" label="Enviatodo (live rates)" />
+        </service>
+
+        <service id="sarissaops_enviatodo.validator.method_available" class="SarissaOps\SyliusEnviatodoPlugin\Validator\Constraints\EnviatodoMethodAvailableValidator">
+            <argument type="service" id="sarissaops_enviatodo.zip_code_api" />
+            <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <tag name="validator.constraint_validator" />
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.shop.quote" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Shop\QuoteController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.component_calculator" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <tag name="controller.service_arguments" />
+        </service>
     </services>
 </container>

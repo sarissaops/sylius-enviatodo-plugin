@@ -42,6 +42,17 @@ final class Configuration implements ConfigurationInterface
                     ->info('Allowed Enviatodo provider ids. Empty means all carriers.')
                 ->end()
                 ->booleanNode('pickup_auto_schedule')->defaultFalse()->end()
+                ->arrayNode('provider_map')
+                    ->useAttributeAsKey('method_code')
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode('provider_id')->isRequired()->cannotBeEmpty()->end()
+                            ->scalarNode('provider_service_id')->isRequired()->cannotBeEmpty()->end()
+                        ->end()
+                    ->end()
+                    ->defaultValue([])
+                    ->info('Sylius shipping-method code -> Enviatodo provider/service pair.')
+                ->end()
             ->end()
         ;
 

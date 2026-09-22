@@ -49,6 +49,12 @@ final class SarissaOpsSyliusEnviatodoExtension extends AbstractResourceExtension
         }
         $container->setParameter('sarissa_ops_sylius_enviatodo.provider_allowlist', $allowlist);
 
+        $providerMap = $config['provider_map'] ?? null;
+        if (!is_array($providerMap)) {
+            throw new \InvalidArgumentException('The "provider_map" option must be an array.');
+        }
+        $container->setParameter('sarissa_ops_sylius_enviatodo.provider_map', $providerMap);
+
         $loader = new XmlFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
 
         $loader->load('services.xml');

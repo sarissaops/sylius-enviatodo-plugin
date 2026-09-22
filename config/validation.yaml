@@ -1,0 +1,6 @@
+# Auto-loaded by FrameworkBundle ($bundlePath/config/validation.yaml). Scopes the
+# plugin constraint to the select-shipping step with the checkout-complete fallback.
+Sylius\Component\Core\Model\Order:
+    constraints:
+        - SarissaOps\SyliusEnviatodoPlugin\Validator\Constraints\EnviatodoMethodAvailable:
+            groups: [enviatodo_select_shipping, sylius_checkout_complete]

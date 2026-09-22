@@ -1,1 +1,7 @@
-# Define your shop routes here (Step 3: checkout AJAX, Step 5: tracking)
+sarissa_ops_sylius_enviatodo_shop_quote:
+    path: /enviatodo/ajax/quote
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.shop.quote::quoteAction
+        _sylius:
+            section: shop
