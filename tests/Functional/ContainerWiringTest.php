@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Functional;
 
+use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use SarissaOps\Enviatodo\Enviatodo;
 use SarissaOps\SyliusEnviatodoPlugin\DependencyInjection\Compiler\EnviatodoValidationPass;
 use SarissaOps\SyliusEnviatodoPlugin\DependencyInjection\SarissaOpsSyliusEnviatodoExtension;
@@ -19,6 +21,8 @@ final class ContainerWiringTest extends TestCase
         $container = new ContainerBuilder();
         $container->setDefinition(Enviatodo::class, new Definition(Enviatodo::class));
         $container->setDefinition('security.csrf.token_manager', new Definition(CsrfTokenManagerInterface::class));
+        $container->setDefinition('doctrine', new Definition(ManagerRegistry::class));
+        $container->setDefinition('logger', new Definition(LoggerInterface::class));
         $container->setParameter('sylius.form.type.checkout_select_shipping.validation_groups', ['sylius']);
 
         $extension = new SarissaOpsSyliusEnviatodoExtension();
@@ -44,6 +48,11 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.shipping_calculator',
             'sarissaops_enviatodo.validator.method_available',
             'sarissaops_enviatodo.controller.shop.quote',
+            'sarissaops_enviatodo.order_api',
+            'sarissaops_enviatodo.balance_api',
+            'sarissaops_enviatodo.repository.shipment',
+            'sarissaops_enviatodo.order_manager',
+            'sarissaops_enviatodo.listener.order_paid',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }
@@ -58,6 +67,16 @@ final class ContainerWiringTest extends TestCase
         $this->assertCount(1, $tags);
         $this->assertSame('enviatodo', $tags[0]['calculator']);
         $this->assertNotEmpty($tags[0]['label']);
+    }
+
+    public function testOrderPaidListenerSubscribesToThePaidTransition(): void
+    {
+        $container = $this->build();
+
+        $tags = $container->getDefinition('sarissaops_enviatodo.listener.order_paid')->getTag('kernel.event_listener');
+
+        $this->assertCount(1, $tags);
+        $this->assertSame('workflow.sylius_order_payment.completed.pay', $tags[0]['event']);
     }
 
     public function testExtensionExposesParametersAndValidationGroup(): void

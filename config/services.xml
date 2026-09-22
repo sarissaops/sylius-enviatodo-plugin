@@ -38,10 +38,42 @@
             <tag name="validator.constraint_validator" />
         </service>
 
+        <service id="sarissaops_enviatodo.order_api" class="SarissaOps\Enviatodo\Api\OrderApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="order" />
+        </service>
+
+        <service id="sarissaops_enviatodo.balance_api" class="SarissaOps\Enviatodo\Api\BalanceApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="balance" />
+        </service>
+
+        <service id="sarissaops_enviatodo.repository.shipment" class="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepository">
+            <argument type="service" id="doctrine" />
+        </service>
+
+        <service id="sarissaops_enviatodo.order_manager" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManager">
+            <argument type="service" id="sarissaops_enviatodo.order_api" />
+            <argument type="service" id="sarissaops_enviatodo.balance_api" />
+            <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <argument type="service" id="doctrine" />
+            <argument type="service" id="logger" />
+            <argument>%sarissa_ops_sylius_enviatodo.insurance%</argument>
+        </service>
+
+        <service id="sarissaops_enviatodo.listener.order_paid" class="SarissaOps\SyliusEnviatodoPlugin\EventListener\OrderPaidListener">
+            <argument type="service" id="sarissaops_enviatodo.order_manager" />
+            <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="logger" />
+            <tag name="kernel.event_listener" event="workflow.sylius_order_payment.completed.pay" method="__invoke" />
+        </service>
+
         <service id="sarissaops_enviatodo.controller.shop.quote" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Shop\QuoteController" public="true">
             <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="security.csrf.token_manager" />
             <tag name="controller.service_arguments" />
         </service>
+
+        <service id="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManagerInterface" alias="sarissaops_enviatodo.order_manager" public="true" />
+        <service id="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface" alias="sarissaops_enviatodo.repository.shipment" public="true" />
     </services>
 </container>

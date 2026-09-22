@@ -16,3 +16,10 @@ parameters:
         - '/Parameter #1 \$configuration of method Symfony\\Component\\DependencyInjection\\Extension\\Extension::processConfiguration\(\) expects Symfony\\Component\\Config\\Definition\\ConfigurationInterface, Symfony\\Component\\Config\\Definition\\ConfigurationInterface\|null given\./'
         -
             identifier: missingType.iterableValue
+        # Doctrine assigns auto-increment ids via reflection; no code path can
+        # assign them, so property.unusedType cannot be satisfied for entities.
+        # Scoped to entities only, documented here instead of a baseline file.
+        -
+            identifier: property.unusedType
+            paths:
+                - src/Entity
