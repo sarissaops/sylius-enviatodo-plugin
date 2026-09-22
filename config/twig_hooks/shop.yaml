@@ -1,0 +1,7 @@
+# Define your Twig hooks here (Step 3: admin shipment panels, Step 5: shop fragments)
+# sylius_twig_hooks:
+#     hooks:
+#         'sylius_admin.order.show.content.sections#right':
+#             enviatodo_panel:
+#                 template: '@SarissaOpsSyliusEnviatodoPlugin/admin/order/panel.html.twig'
+#                 priority: 50

@@ -1,0 +1,4 @@
+# Put your Behat suites definitions here (Step 7: enviatodo_shipping, enviatodo_config)
+
+default:
+    suites: ~

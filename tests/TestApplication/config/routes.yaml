@@ -1,0 +1,5 @@
+sarissa_ops_sylius_enviatodo_admin:
+    resource: "@SarissaOpsSyliusEnviatodoPlugin/config/routes/admin.yaml"
+
+sarissa_ops_sylius_enviatodo_shop:
+    resource: "@SarissaOpsSyliusEnviatodoPlugin/config/routes/shop.yaml"
