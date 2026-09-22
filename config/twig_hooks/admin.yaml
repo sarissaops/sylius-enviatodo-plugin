@@ -1,0 +1,6 @@
+sylius_twig_hooks:
+    hooks:
+        'sylius_admin.order.show.content.sections#right':
+            enviatodo_tracking:
+                template: '@SarissaOpsSyliusEnviatodoPlugin/admin/order/tracking.html.twig'
+                priority: 50

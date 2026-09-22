@@ -53,6 +53,11 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.repository.shipment',
             'sarissaops_enviatodo.order_manager',
             'sarissaops_enviatodo.listener.order_paid',
+            'sarissaops_enviatodo.guide_api',
+            'sarissaops_enviatodo.label_service',
+            'sarissaops_enviatodo.shipment_canceller',
+            'sarissaops_enviatodo.controller.admin.shipment_bulk',
+            'sarissaops_enviatodo.twig.admin',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }
@@ -77,6 +82,15 @@ final class ContainerWiringTest extends TestCase
 
         $this->assertCount(1, $tags);
         $this->assertSame('workflow.sylius_order_payment.completed.pay', $tags[0]['event']);
+    }
+
+    public function testTwigExtensionIsRegistered(): void
+    {
+        $container = $this->build();
+
+        $tags = $container->getDefinition('sarissaops_enviatodo.twig.admin')->getTag('twig.extension');
+
+        $this->assertCount(1, $tags);
     }
 
     public function testExtensionExposesParametersAndValidationGroup(): void

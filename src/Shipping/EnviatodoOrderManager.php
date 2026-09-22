@@ -77,6 +77,7 @@ final class EnviatodoOrderManager implements EnviatodoOrderManagerInterface
         }
 
         $draft->complete($first->getTrackingId(), (int) round($created->getSummary()->getTotal() * 100));
+        $draft->setGuideId($first->getId());
         $this->registry->getManager()->flush();
 
         $this->logger->info('Enviatodo label purchased.', ['tracking_id' => $first->getTrackingId()]);

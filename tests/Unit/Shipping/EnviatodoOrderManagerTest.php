@@ -98,6 +98,7 @@ final class EnviatodoOrderManagerTest extends TestCase
 
         $this->assertTrue($draft->isCompleted());
         $this->assertSame('TRK1', $draft->getTrackingId());
+        $this->assertSame('g1', $draft->getGuideId());
         $this->assertSame(23200, $draft->getAmountMinor());
     }
 

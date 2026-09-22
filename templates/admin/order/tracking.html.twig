@@ -1,0 +1,15 @@
+{% if hookable_metadata is defined and hookable_metadata.context.order is defined %}
+    {% set enviatodo_order = hookable_metadata.context.order %}
+    <div class="enviatodo-tracking">
+        {% for shipment in enviatodo_order.shipments %}
+            {% set record = enviatodo_shipment_record(shipment) %}
+            {% if record is not null %}
+                <p>
+                    <strong>{{ record.trackingId ?? record.quoteUuid }}</strong>
+                    <span>{{ record.handover }}</span>
+                    {% if record.handoverDetail is not null %}<span>{{ record.handoverDetail }}</span>{% endif %}
+                </p>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}

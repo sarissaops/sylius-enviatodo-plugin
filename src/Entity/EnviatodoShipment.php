@@ -18,6 +18,14 @@ class EnviatodoShipment
 {
     public const HANDOVER_LABEL_CREATED = 'label_created';
 
+    public const HANDOVER_DROPPED_AT_BRANCH = 'dropped_at_branch';
+
+    public const HANDOVER_IN_PICKUP = 'in_pickup';
+
+    public const HANDOVER_IN_TRANSIT = 'in_transit';
+
+    public const HANDOVER_DELIVERED = 'delivered';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
@@ -39,11 +47,17 @@ class EnviatodoShipment
     #[ORM\Column(type: 'string', nullable: true)]
     private ?string $trackingId = null;
 
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $guideId = null;
+
     #[ORM\Column(type: 'integer')]
     private int $amountMinor = 0;
 
     #[ORM\Column(type: 'string')]
     private string $handover = self::HANDOVER_LABEL_CREATED;
+
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $handoverDetail = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
@@ -76,6 +90,38 @@ class EnviatodoShipment
         return null !== $this->trackingId;
     }
 
+    /**
+     * Merchant left the parcel at a carrier branch: no pickup is booked and no
+     * API call fires. The branch reference keeps the milestone traceable.
+     */
+    public function markDroppedAtBranch(string $branchReference): void
+    {
+        $this->handover = self::HANDOVER_DROPPED_AT_BRANCH;
+        $this->handoverDetail = $branchReference;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markInPickup(): void
+    {
+        $this->handover = self::HANDOVER_IN_PICKUP;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markInTransit(): void
+    {
+        $this->handover = self::HANDOVER_IN_TRANSIT;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markDelivered(): void
+    {
+        $this->handover = self::HANDOVER_DELIVERED;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -106,6 +152,17 @@ class EnviatodoShipment
         return $this->trackingId;
     }
 
+    public function getGuideId(): ?string
+    {
+        return $this->guideId;
+    }
+
+    public function setGuideId(string $guideId): void
+    {
+        $this->guideId = $guideId;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function getAmountMinor(): int
     {
         return $this->amountMinor;
@@ -114,6 +171,11 @@ class EnviatodoShipment
     public function getHandover(): string
     {
         return $this->handover;
+    }
+
+    public function getHandoverDetail(): ?string
+    {
+        return $this->handoverDetail;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

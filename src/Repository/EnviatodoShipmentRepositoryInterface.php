@@ -9,5 +9,7 @@ use Sylius\Component\Shipping\Model\ShipmentInterface;
 
 interface EnviatodoShipmentRepositoryInterface
 {
+    public function findById(int $id): ?EnviatodoShipment;
+
     public function findOneByShipment(ShipmentInterface $shipment): ?EnviatodoShipment;
 }

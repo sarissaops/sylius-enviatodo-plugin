@@ -1,1 +1,7 @@
-# Define your own admin routes here
+sarissa_ops_sylius_enviatodo_admin_bulk_labels:
+    path: /admin/enviatodo/shipments/bulk-labels
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.shipment_bulk::bulkLabelsAction
+        _sylius:
+            section: admin

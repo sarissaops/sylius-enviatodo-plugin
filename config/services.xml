@@ -75,5 +75,30 @@
 
         <service id="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManagerInterface" alias="sarissaops_enviatodo.order_manager" public="true" />
         <service id="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface" alias="sarissaops_enviatodo.repository.shipment" public="true" />
+
+        <service id="sarissaops_enviatodo.guide_api" class="SarissaOps\Enviatodo\Api\GuideApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="guide" />
+        </service>
+
+        <service id="sarissaops_enviatodo.label_service" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService">
+            <argument type="service" id="sarissaops_enviatodo.guide_api" />
+        </service>
+
+        <service id="sarissaops_enviatodo.shipment_canceller" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\ShipmentCanceller">
+            <argument type="service" id="sarissaops_enviatodo.order_api" />
+            <argument type="service" id="logger" />
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.shipment_bulk" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\ShipmentBulkController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.label_service" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <tag name="controller.service_arguments" />
+        </service>
+
+        <service id="sarissaops_enviatodo.twig.admin" class="SarissaOps\SyliusEnviatodoPlugin\Twig\EnviatodoAdminExtension">
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <tag name="twig.extension" />
+        </service>
     </services>
 </container>
