@@ -32,37 +32,37 @@ class EnviatodoShipment
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: ShipmentInterface::class)]
-    #[ORM\JoinColumn(name: 'shipment_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'shipment_id', referencedColumnName: 'id', nullable: false, unique: true, onDelete: 'CASCADE')]
     private ShipmentInterface $shipment;
 
-    #[ORM\Column(type: 'string')]
+    #[ORM\Column(name: 'quote_uuid', type: 'string')]
     private string $quoteUuid;
 
-    #[ORM\Column(type: 'string')]
+    #[ORM\Column(name: 'provider_id', type: 'string')]
     private string $providerId;
 
-    #[ORM\Column(type: 'string')]
+    #[ORM\Column(name: 'provider_service_id', type: 'string')]
     private string $providerServiceId;
 
-    #[ORM\Column(type: 'string', nullable: true)]
+    #[ORM\Column(name: 'tracking_id', type: 'string', nullable: true)]
     private ?string $trackingId = null;
 
-    #[ORM\Column(type: 'string', nullable: true)]
+    #[ORM\Column(name: 'guide_id', type: 'string', nullable: true)]
     private ?string $guideId = null;
 
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column(name: 'amount_minor', type: 'integer')]
     private int $amountMinor = 0;
 
-    #[ORM\Column(type: 'string')]
+    #[ORM\Column(name: 'handover', type: 'string')]
     private string $handover = self::HANDOVER_LABEL_CREATED;
 
-    #[ORM\Column(type: 'string', nullable: true)]
+    #[ORM\Column(name: 'handover_detail', type: 'string', nullable: true)]
     private ?string $handoverDetail = null;
 
-    #[ORM\Column(type: 'datetime_immutable')]
+    #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[ORM\Column(name: 'updated_at', type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct(
