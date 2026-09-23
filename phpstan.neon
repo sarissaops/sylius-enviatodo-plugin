@@ -23,3 +23,11 @@ parameters:
             identifier: property.unusedType
             paths:
                 - src/Entity
+        # State processors narrow mixed $data with instanceof guards that the
+        # @implements generics above them render provable. The guards stay:
+        # they protect direct calls and misconfigured operations at runtime.
+        -
+            identifier: instanceof.alwaysTrue
+            paths:
+                - src/State/Processor/Shop/LiveRatesProcessor.php
+                - src/State/Processor/Admin/BulkLabelsProcessor.php

@@ -131,6 +131,18 @@
             <tag name="controller.service_arguments" />
         </service>
 
+        <service id="sarissaops_enviatodo.state_processor.shop.live_rates" class="SarissaOps\SyliusEnviatodoPlugin\State\Processor\Shop\LiveRatesProcessor">
+            <argument type="service" id="sylius.repository.order" />
+            <argument type="service" id="sarissaops_enviatodo.component_calculator" />
+            <argument type="service" id="sarissaops_enviatodo.provider_map" />
+        </service>
+
+        <service id="sarissaops_enviatodo.state_processor.admin.bulk_labels" class="SarissaOps\SyliusEnviatodoPlugin\State\Processor\Admin\BulkLabelsProcessor">
+            <argument type="service" id="sarissaops_enviatodo.label_service" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="logger" />
+        </service>
+
         <service id="sarissaops_enviatodo.guide_api" class="SarissaOps\Enviatodo\Api\GuideApi">
             <factory service="SarissaOps\Enviatodo\Enviatodo" method="guide" />
         </service>
@@ -149,11 +161,6 @@
             <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
             <argument type="service" id="security.csrf.token_manager" />
             <tag name="controller.service_arguments" />
-        </service>
-
-        <service id="sarissaops_enviatodo.twig.admin" class="SarissaOps\SyliusEnviatodoPlugin\Twig\EnviatodoAdminExtension">
-            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
-            <tag name="twig.extension" />
         </service>
 
         <service id="sarissaops_enviatodo.pickup_api" class="SarissaOps\Enviatodo\Api\PickupApi">

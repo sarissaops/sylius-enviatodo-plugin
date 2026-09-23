@@ -1,4 +1,6 @@
-# Put your plugin configuration here
+# Twig hooks live in twig_hooks/ and load only in applications that opt in:
+# import "@SarissaOpsSyliusEnviatodoPlugin/config/twig_hooks/admin.yaml"
+# (and shop.yaml) from the app. This keeps headless installs free of the
+# sylius_twig_hooks configuration root.
 
-imports:
-    - { resource: "twig_hooks/**/*.yaml" }
+imports: []

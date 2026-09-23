@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<resources
+    xmlns="https://api-platform.com/schema/metadata/resources-3.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://api-platform.com/schema/metadata/resources-3.0 https://api-platform.com/schema/metadata/resources-3.0.xsd"
+>
+    <resource class="SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsRequest">
+        <operations>
+            <operation
+                name="sarissaops_enviatodo_admin_shipment_bulk_labels"
+                class="ApiPlatform\Metadata\Post"
+                uriTemplate="/admin/shipments/bulk-labels"
+                processor="sarissaops_enviatodo.state_processor.admin.bulk_labels"
+                output="SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsResult"
+                status="200"
+                security="is_granted('ROLE_API_ACCESS')"
+            >
+                <denormalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:admin:bulk_labels:write</value>
+                            </values>
+                        </value>
+                    </values>
+                </denormalizationContext>
+                <normalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:admin:bulk_labels:show</value>
+                            </values>
+                        </value>
+                    </values>
+                </normalizationContext>
+                <extraProperties>
+                    <values>
+                        <value name="summary">Download Enviatodo label binaries for several shipments. Per-file failures ride along in invalidFiles.</value>
+                    </values>
+                </extraProperties>
+            </operation>
+        </operations>
+    </resource>
+</resources>

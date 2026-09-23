@@ -49,9 +49,9 @@ final class QuoteController
 
         try {
             $payload = QuotePayload::create(
-                self::stringMap($origin),
-                self::stringMap($destination),
-                self::stringMap($package),
+                QuotePayload::normalize($origin),
+                QuotePayload::normalize($destination),
+                QuotePayload::normalize($package),
                 $quantity,
             );
             $quoted = $this->calculator->rates($payload);
@@ -75,22 +75,5 @@ final class QuoteController
         }
 
         return new JsonResponse(['uuid' => $quoted->getTransactionUuid(), 'rates' => $rates]);
-    }
-
-    /**
-     * @param array<mixed> $input
-     *
-     * @return array<string, mixed>
-     */
-    private static function stringMap(array $input): array
-    {
-        $mapped = [];
-        foreach ($input as $key => $value) {
-            if (\is_string($key)) {
-                $mapped[$key] = $value;
-            }
-        }
-
-        return $mapped;
     }
 }

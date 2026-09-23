@@ -255,9 +255,12 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   by-type; GET deletes), package CRUD (slash kept; 4 weights; declared value +
   insurance fields), catalog-fed SAT dropdowns, carrier-mapping UI, checkout
   defaults. Exit: merchant self-serves.
-- **Step 6 — Headless + i18n.** APIP-4 XML, serialization/validation XML,
-  normalizer (~prio 100), `messenger=input` ops, `es`-primary translations,
-  `api-test-case` tests (alice fixtures + expected JSON). Exit: headless parity.
+- **Step 6 — Headless + i18n.** APIP-4 XML admin/shop (custom processors, not
+  `messenger=input`: synchronous JSON needs no bus surface — KISS deviation),
+  DTO groups/validation via PHP attributes on our own classes (XML reserved
+  for third-party-class mappings), provider/processor unit tests
+  (`api-test-case` deferred with Step 7 DB infra), `es`-primary translations,
+  UI wiring gated behind Twig presence. Exit: headless parity.
 - **Step 7 — E2E.** Behat file set (skeleton shape): `behat.yml.dist`
   (`%env(BEHAT_BASE_URL)%` + `SuiteTagsExtension`, imports core `suites.yml` +
   `tests/Behat/Resources/suites.yml`); `suites.yml` (core `doctrine_orm` +

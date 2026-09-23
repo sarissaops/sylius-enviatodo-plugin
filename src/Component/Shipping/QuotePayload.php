@@ -64,4 +64,25 @@ final class QuotePayload
             'package' => $package,
         ];
     }
+
+    /**
+     * Drops non-string keys from decoded JSON and form data, where numeric
+     * keys carry no address meaning. Single normalization point for every
+     * payload entering the calculator.
+     *
+     * @param array<mixed> $payload
+     *
+     * @return array<string, mixed>
+     */
+    public static function normalize(array $payload): array
+    {
+        $normalized = [];
+        foreach ($payload as $key => $value) {
+            if (\is_string($key)) {
+                $normalized[$key] = $value;
+            }
+        }
+
+        return $normalized;
+    }
 }

@@ -1,5 +1,6 @@
 imports:
     - { resource: "@SarissaOpsSyliusEnviatodoPlugin/config/config.yaml" }
+    - { resource: "@SarissaOpsSyliusEnviatodoPlugin/config/twig_hooks/admin.yaml" }
     - { resource: "services_test.php" }
 
 # Test-only credentials: no live traffic is ever made from the harness.

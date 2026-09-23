@@ -7,6 +7,7 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Functional;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Sylius\Component\Core\Repository\OrderRepositoryInterface;
 use SarissaOps\Enviatodo\Enviatodo;
 use SarissaOps\SyliusEnviatodoPlugin\DependencyInjection\Compiler\EnviatodoValidationPass;
 use SarissaOps\SyliusEnviatodoPlugin\DependencyInjection\SarissaOpsSyliusEnviatodoExtension;
@@ -23,6 +24,7 @@ final class ContainerWiringTest extends TestCase
         $container->setDefinition('security.csrf.token_manager', new Definition(CsrfTokenManagerInterface::class));
         $container->setDefinition('doctrine', new Definition(ManagerRegistry::class));
         $container->setDefinition('logger', new Definition(LoggerInterface::class));
+        $container->setDefinition('sylius.repository.order', new Definition(OrderRepositoryInterface::class));
         $container->setParameter('sylius.form.type.checkout_select_shipping.validation_groups', ['sylius']);
 
         $extension = new SarissaOpsSyliusEnviatodoExtension();
@@ -57,7 +59,6 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.label_service',
             'sarissaops_enviatodo.shipment_canceller',
             'sarissaops_enviatodo.controller.admin.shipment_bulk',
-            'sarissaops_enviatodo.twig.admin',
             'sarissaops_enviatodo.pickup_api',
             'sarissaops_enviatodo.pickup_scheduler',
             'sarissaops_enviatodo.controller.admin.pickup',
@@ -72,6 +73,8 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.controller.admin.address',
             'sarissaops_enviatodo.controller.admin.package',
             'sarissaops_enviatodo.controller.admin.carrier',
+            'sarissaops_enviatodo.state_processor.shop.live_rates',
+            'sarissaops_enviatodo.state_processor.admin.bulk_labels',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }
@@ -98,15 +101,6 @@ final class ContainerWiringTest extends TestCase
         $this->assertSame('workflow.sylius_order_payment.completed.pay', $tags[0]['event']);
     }
 
-    public function testTwigExtensionIsRegistered(): void
-    {
-        $container = $this->build();
-
-        $tags = $container->getDefinition('sarissaops_enviatodo.twig.admin')->getTag('twig.extension');
-
-        $this->assertCount(1, $tags);
-    }
-
     public function testControllersArePlainCallables(): void
     {
         $container = $this->build();
@@ -126,7 +120,7 @@ final class ContainerWiringTest extends TestCase
     {
         $container = $this->build();
 
-        foreach (['token', 'endpoint', 'provider_map', 'insurance', 'pickup_auto_schedule'] as $key) {
+        foreach (['token', 'endpoint', 'provider_map', 'insurance', 'pickup_auto_schedule', 'ui_enabled'] as $key) {
             $this->assertTrue($container->hasParameter('sarissa_ops_sylius_enviatodo.' . $key), $key);
         }
         $this->assertSame(

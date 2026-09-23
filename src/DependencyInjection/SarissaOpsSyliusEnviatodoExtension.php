@@ -58,11 +58,22 @@ final class SarissaOpsSyliusEnviatodoExtension extends AbstractResourceExtension
         $loader = new XmlFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
 
         $loader->load('services.xml');
+
+        // UI-only wiring stays out of headless applications. The flag is set
+        // in prepend(), which runs on the real container: load() itself runs
+        // on a temporary copy where hasExtension() is unreliable.
+        if ($container->hasParameter('sarissa_ops_sylius_enviatodo.ui_enabled') &&
+            true === $container->getParameter('sarissa_ops_sylius_enviatodo.ui_enabled')
+        ) {
+            $loader->load('twig.xml');
+        }
     }
 
     public function prepend(ContainerBuilder $container): void
     {
         $this->prependDoctrineMigrations($container);
+
+        $container->setParameter('sarissa_ops_sylius_enviatodo.ui_enabled', $container->hasExtension('twig'));
     }
 
     protected function getMigrationsNamespace(): string

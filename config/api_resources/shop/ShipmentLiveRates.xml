@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<resources
+    xmlns="https://api-platform.com/schema/metadata/resources-3.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://api-platform.com/schema/metadata/resources-3.0 https://api-platform.com/schema/metadata/resources-3.0.xsd"
+>
+    <resource class="%sylius.model.shipment.class%">
+        <operations>
+            <operation
+                name="sarissaops_enviatodo_shop_shipment_live_rates"
+                class="ApiPlatform\Metadata\Post"
+                uriTemplate="/shop/orders/{tokenValue}/shipments/{shipmentId}/live-rates"
+                input="SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesQuoteRequest"
+                output="SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesResult"
+                processor="sarissaops_enviatodo.state_processor.shop.live_rates"
+            >
+                <uriVariables>
+                    <uriVariable parameterName="tokenValue" fromClass="%sylius.model.order.class%" toProperty="order" />
+                    <uriVariable parameterName="shipmentId" fromClass="%sylius.model.shipment.class%" />
+                </uriVariables>
+                <denormalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:shop:live_rates:write</value>
+                            </values>
+                        </value>
+                    </values>
+                </denormalizationContext>
+                <normalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:shop:live_rates:show</value>
+                            </values>
+                        </value>
+                    </values>
+                </normalizationContext>
+                <extraProperties>
+                    <values>
+                        <value name="summary">Live Enviatodo rates for one checkout shipment. Returns the quote uuid alongside the rows; hold it for order creation.</value>
+                    </values>
+                </extraProperties>
+            </operation>
+        </operations>
+    </resource>
+</resources>

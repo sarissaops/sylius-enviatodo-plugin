@@ -6,6 +6,7 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Shipping;
 
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
 use Sylius\Component\Shipping\Calculator\CalculatorInterface;
 use Sylius\Component\Shipping\Model\ShipmentInterface;
 
@@ -37,14 +38,8 @@ final class EnviatodoShippingCalculator implements CalculatorInterface
         if (!\is_array($quote)) {
             throw new \InvalidArgumentException('Enviatodo calculator configuration requires a "quote" payload array.');
         }
-        $payload = [];
-        foreach ($quote as $key => $value) {
-            if (\is_string($key)) {
-                $payload[$key] = $value;
-            }
-        }
 
-        $rate = $this->calculator->rateFor($payload, $mapping['provider_id'], $mapping['provider_service_id']);
+        $rate = $this->calculator->rateFor(QuotePayload::normalize($quote), $mapping['provider_id'], $mapping['provider_service_id']);
 
         return $rate?->getAmountMinor() ?? 0;
     }
