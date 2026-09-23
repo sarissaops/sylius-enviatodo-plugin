@@ -29,3 +29,79 @@ sarissa_ops_sylius_enviatodo_admin_pickup_cancel:
         _controller: sarissaops_enviatodo.controller.admin.pickup::cancelAction
         _sylius:
             section: admin
+
+sarissa_ops_sylius_enviatodo_admin_address_list:
+    path: /admin/enviatodo/addresses
+    methods: [GET]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.address::listAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_address_show:
+    path: /admin/enviatodo/addresses/{id}
+    methods: [GET]
+    requirements: { id: '\d+' }
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.address::showAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_address_save:
+    path: /admin/enviatodo/addresses
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.address::saveAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_address_delete:
+    path: /admin/enviatodo/addresses/{id}/delete
+    methods: [POST]
+    requirements: { id: '\d+' }
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.address::deleteAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_package_list:
+    path: /admin/enviatodo/packages
+    methods: [GET]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.package::listAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_package_show:
+    path: /admin/enviatodo/packages/{id}
+    methods: [GET]
+    requirements: { id: '\d+' }
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.package::showAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_package_save:
+    path: /admin/enviatodo/packages
+    methods: [POST]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.package::saveAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_package_delete:
+    path: /admin/enviatodo/packages/{id}/delete
+    methods: [POST]
+    requirements: { id: '\d+' }
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.package::deleteAction
+        _sylius:
+            section: admin
+
+sarissa_ops_sylius_enviatodo_admin_carriers:
+    path: /admin/enviatodo/carriers
+    methods: [GET]
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.carrier::listAction
+        _sylius:
+            section: admin

@@ -61,6 +61,17 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.pickup_api',
             'sarissaops_enviatodo.pickup_scheduler',
             'sarissaops_enviatodo.controller.admin.pickup',
+            'sarissaops_enviatodo.address_api',
+            'sarissaops_enviatodo.package_api',
+            'sarissaops_enviatodo.parcel_api',
+            'sarissaops_enviatodo.catalog_api',
+            'sarissaops_enviatodo.address_book',
+            'sarissaops_enviatodo.package_catalog',
+            'sarissaops_enviatodo.carrier_catalog',
+            'sarissaops_enviatodo.checkout_defaults',
+            'sarissaops_enviatodo.controller.admin.address',
+            'sarissaops_enviatodo.controller.admin.package',
+            'sarissaops_enviatodo.controller.admin.carrier',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }

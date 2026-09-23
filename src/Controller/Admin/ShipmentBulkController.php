@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
+use SarissaOps\SyliusEnviatodoPlugin\Controller\CsrfProtection;
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class ShipmentBulkController
@@ -25,13 +25,9 @@ final class ShipmentBulkController
 
     public function bulkLabelsAction(Request $request): JsonResponse
     {
-        $token = $request->headers->get('X-CSRF-Token', '');
-        if ('' === $token) {
-            $fallback = $request->request->get('_csrf_token', '');
-            $token = \is_string($fallback) ? $fallback : '';
-        }
-        if (!$this->csrfTokenManager->isTokenValid(new CsrfToken(self::CSRF_TOKEN_ID, $token))) {
-            return new JsonResponse(['error' => 'invalid_csrf_token'], Response::HTTP_FORBIDDEN);
+        $guard = CsrfProtection::validate($request, $this->csrfTokenManager, self::CSRF_TOKEN_ID);
+        if (null !== $guard) {
+            return $guard;
         }
 
         $body = json_decode($request->getContent(), true);

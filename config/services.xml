@@ -76,6 +76,61 @@
         <service id="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManagerInterface" alias="sarissaops_enviatodo.order_manager" public="true" />
         <service id="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface" alias="sarissaops_enviatodo.repository.shipment" public="true" />
 
+        <service id="sarissaops_enviatodo.address_api" class="SarissaOps\Enviatodo\Api\AddressApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="address" />
+        </service>
+
+        <service id="sarissaops_enviatodo.package_api" class="SarissaOps\Enviatodo\Api\PackageApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="package" />
+        </service>
+
+        <service id="sarissaops_enviatodo.parcel_api" class="SarissaOps\Enviatodo\Api\ParcelApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="parcel" />
+        </service>
+
+        <service id="sarissaops_enviatodo.catalog_api" class="SarissaOps\Enviatodo\Api\CatalogApi">
+            <factory service="SarissaOps\Enviatodo\Enviatodo" method="catalog" />
+        </service>
+
+        <service id="sarissaops_enviatodo.address_book" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoAddressBook">
+            <argument type="service" id="sarissaops_enviatodo.address_api" />
+            <argument type="service" id="logger" />
+        </service>
+
+        <service id="sarissaops_enviatodo.package_catalog" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPackageCatalog">
+            <argument type="service" id="sarissaops_enviatodo.package_api" />
+            <argument type="service" id="logger" />
+        </service>
+
+        <service id="sarissaops_enviatodo.carrier_catalog" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoCarrierCatalog">
+            <argument type="service" id="sarissaops_enviatodo.parcel_api" />
+            <argument type="service" id="sarissaops_enviatodo.catalog_api" />
+        </service>
+
+        <service id="sarissaops_enviatodo.checkout_defaults" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoCheckoutDefaults">
+            <argument type="service" id="sarissaops_enviatodo.address_book" />
+            <argument type="service" id="sarissaops_enviatodo.package_catalog" />
+            <argument>%sarissa_ops_sylius_enviatodo.origin_address_id%</argument>
+            <argument>%sarissa_ops_sylius_enviatodo.default_package_id%</argument>
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.address" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\AddressController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.address_book" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <tag name="controller.service_arguments" />
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.package" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PackageController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.package_catalog" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <tag name="controller.service_arguments" />
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.carrier" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\CarrierController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.carrier_catalog" />
+            <tag name="controller.service_arguments" />
+        </service>
+
         <service id="sarissaops_enviatodo.guide_api" class="SarissaOps\Enviatodo\Api\GuideApi">
             <factory service="SarissaOps\Enviatodo\Enviatodo" method="guide" />
         </service>
