@@ -4,7 +4,11 @@ default:
     suites:
         selecting_enviatodo_shipping_method:
             contexts:
+                - sylius.behat.context.hook.bad_gateway
                 - sylius.behat.context.hook.doctrine_orm
+                - sylius.behat.context.hook.session
+                - sylius.behat.context.hook.guest_cart
+                - sylius.behat.context.hook.mailer
                 - sylius.behat.context.transform.lexical
                 - sylius.behat.context.transform.product
                 - sylius.behat.context.transform.address

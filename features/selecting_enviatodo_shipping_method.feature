@@ -10,9 +10,11 @@ Feature: Selecting Enviatodo shipping method
         And the store allows Enviatodo shipping method "Enviatodo Estafeta" with code "enviatodo_estafeta"
         And the store allows paying Offline
 
-    @ui
+    @ui @javascript
     Scenario: Customer sees live Enviatodo rates at checkout
-        Given I added product "T-Shirt" to the cart
+        When I add product "T-Shirt" to the cart
+        And I check items in my cart
+        Then there should be one item in my cart
         When I complete addressing step with email "john@example.com" and "United States" based billing address
         And I select "Enviatodo Estafeta" shipping method
         Then I should see "Enviatodo Estafeta" shipping method with a live rate
