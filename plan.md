@@ -1,7 +1,16 @@
 # Plan — `sarissaops/sylius-enviatodo-plugin` (build inside `SyliusEnviatodoPlugin/`)
 
-> Status 2026-09-22, rev 4 (maximal detail, vanilla-only). Single source of truth
-> for Phase 3 execution. Parent: `../PROJECT_MASTER_PLAN.md` (§§1–7).
+> Status 2026-09-23, rev 5 — COMPLETE. Steps 0–7 built, gated green, and
+> live-verified against `sylius-dev-env` on `:8001` (later moved to `:8000`;
+> re-verify on publish). Commits `2e3f0ff` → `3868055` in
+> `SyliusEnviatodoPlugin/` (local only, unpushed, unreleased). Final gates:
+> phpunit 108 tests / 284 assertions green; Behat 5 scenarios / 81 steps green
+> (`@enviatodo_live` suite defined, excluded by default); PHPStan level max
+> clean; ECS clean. Live proof: 16 enviatodo routes, calculator in
+> `sylius.shipping_calculators`, validation group appended, tracking hook
+> enabled, CSRF guards return 403, OpenAPI lists both plugin ops, shop/admin
+> unregressed, all 4 migrations applied on MariaDB with snake_case columns
+> matching 1:1. Parent: `../PROJECT_MASTER_PLAN.md` (§§1–7).
 > Locked: style = **ECS only** (`sylius-labs/coding-standard`, never standalone
 > php-cs-fixer); vendor = **`sarissaops`**; git = **init here, retire the old
 > empty `sylius-enviatodo-plugin/`**. Methodology: BDD (Behat) outside, TDD
@@ -38,7 +47,10 @@ staff do fulfilment); bulk grid actions in core (neither order nor shipment grid
 defines `bulk:` — we add our own); company fields on `Customer` (does not exist
 upstream — company lives on `Address`).
 
-## 2. Verified starting state (nothing assumed)
+## 2. Starting state (pre-Step 0, preserved for history)
+
+Everything in this section described the scaffold before the build; §9 records
+what was actually built, green means verified.
 
 - Renamed skeleton. `src/SarissaOpsSyliusEnviatodoPlugin.php:11` (`Bundle` +
   `SyliusPluginTrait`, `getPath() = dirname(__DIR__)`); renamed DI extension
@@ -220,25 +232,32 @@ bin/console lint:container && bin/console debug:router | grep -i envia \
 
 Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
 
-## 9. Build steps (each RED→GREEN→gates; exit = operable increment)
+## 9. Build steps (all complete; per-step commits + deviations)
 
-- **Step 0 — Repair.** composer.json (§2/§7) → restore 4 QA configs from
+- **Step 0 — Repair ✓ (`2e3f0ff`).** composer.json (§2/§7) → restore 4 QA configs from
   skeleton → delete greetings (keep smoke) → real `Configuration`
   (`token/endpoint/defaults/allowlist/pickup toggle`) + `load()` → plugin
   migration namespace → `composer update` → gate green → `git init` + remote,
-  retire old dir.
-- **Step 1 — Quote (API #1–4).** Feature `selecting_enviatodo_shipping_method`
+  retire old dir. Deviation: dropped `sylius/sylius-rector` (pins phpstan ^1
+  via rector/rector, conflicts with the level-max toolchain).
+- **Step 1 — Quote (API #1–4) ✓ (`244f512`).** Feature `selecting_enviatodo_shipping_method`
   (reuse `sylius.behat.context.*` + 1 plugin context) → `CalculatorTest`
   (mocked `QuoteApi`, 4 weight keys) → `EnviatodoCalculator`+`RateResult` →
-  `#[AsShippingCalculator]` adapter + container test → zip validator +
+  explicit-tag adapter (deviation: `sylius.shipping_calculator` tag, **not**
+  `#[AsShippingCalculator]`) + container test → zip validator +
   CSRF AJAX quote + `ProviderMap` (tolerant decode, shared gate). Test style
   mirrors mailgun reality: Component tests = inline rate-row JSON (no fixture
   files); adapter tests = real class + mocked transport asserting
   URI/method/body with `null`=wildcard. Exit: purchasable rates, uuid held.
-- **Step 2 — Buy label (API #5, #12).** `OrderPaidListener` → balance guard →
-  `create_order` → persist `trx_id`/tracking/`file_id`/summary → dual
-  migrations → repos. Exit: paid order → shippable label.
-- **Step 3 — Labels/tracking/cancel/handover (API #6–11 + local state).**
+- **Step 2 — Buy label (API #5, #12) ✓ (`b7c12b1`).** `OrderPaidListener` → balance guard →
+  `create_order` → persist tracking/`file_id`/summary → dual
+  migrations → repos. Addition: two-phase draft→complete (draft holds uuid at
+  checkout, completion spends it post-payment); `EnviatodoOrderManagerInterface`
+  + `EnviatodoShipmentRepositoryInterface` extracted (final classes unmockable);
+  scoped `property.unusedType` ignore for Doctrine ids (documented, no baseline);
+  no `trx_id` persisted (create response carries summary + guides only).
+  Exit: paid order → shippable label.
+- **Step 3 — Labels/tracking/cancel/handover (API #6–11 + local state) ✓ (`b306e6a`).**
   Order-show shipment panels (hook `.item.general` for tracking, `.item.actions`
   for label/ship buttons); download + bulk-binary (+`invalid_files[]` retry,
   ~10 chunks, custom grid `bulk` action — core grids define none); tracking sync
@@ -246,22 +265,27 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   (`label_created → [dropped_at_branch(+branch ref) | in_pickup] → in_transit →
   delivered`) with the drop-off branch recorded Furgonetka-point-style
   (`branchCode/branchName/carrier`) but as a *merchant* action needing no API
-  call. Company-gated extras via own enum. Exit: ops without Enviatodo
+  call. Company-gated extras via own enum. Partially deferred (no BDD scenario
+  required them): company menu gating, order grid action, `OrderNormalizer`.
+  Exit: ops without Enviatodo
   dashboard.
-- **Step 4 — Pickups (API #26–28).** Queue (`providers[]`), create form
+- **Step 4 — Pickups (API #26–28) ✓ (`debefee`).** Queue (`providers[]`), create form
   (shared-origin check, handover contacts incl. `contact_email`), cancel with
-  `user_id`; auto-schedule toggle. Exit: one call ends the warehouse day.
-- **Step 5 — Master data (API #13–25).** Address CRUD (per-call header on
+  `user_id`; auto-schedule toggle. Addition: shared `CsrfProtection` guard
+  extracted on 4th duplication (Rule of Three). Exit: one call ends the warehouse day.
+- **Step 5 — Master data (API #13–25) ✓ (`90f1229`).** Address CRUD (per-call header on
   by-type; GET deletes), package CRUD (slash kept; 4 weights; declared value +
   insurance fields), catalog-fed SAT dropdowns, carrier-mapping UI, checkout
-  defaults. Exit: merchant self-serves.
-- **Step 6 — Headless + i18n.** APIP-4 XML admin/shop (custom processors, not
+  defaults. Addition: controllers are **plain callables** (live 500 proved
+  `AbstractController` without autoconfiguration never gets `setContainer()` —
+  matches Mollie convention). Exit: merchant self-serves.
+- **Step 6 — Headless + i18n ✓ (`3aef392`).** APIP-4 XML admin/shop (custom processors, not
   `messenger=input`: synchronous JSON needs no bus surface — KISS deviation),
   DTO groups/validation via PHP attributes on our own classes (XML reserved
   for third-party-class mappings), provider/processor unit tests
   (`api-test-case` deferred with Step 7 DB infra), `es`-primary translations,
   UI wiring gated behind Twig presence. Exit: headless parity.
-- **Step 7 — E2E.** Behat file set (skeleton shape): `behat.yml.dist`
+- **Step 7 — E2E ✓ (`3868055`).** Behat file set (skeleton shape): `behat.yml.dist`
   (`%env(BEHAT_BASE_URL)%` + `SuiteTagsExtension`, imports core `suites.yml` +
   `tests/Behat/Resources/suites.yml`); `suites.yml` (core `doctrine_orm` +
   transforms + setups + shop/admin UI contexts + 2 plugin contexts, tags
@@ -279,6 +303,13 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   entity traits on clean `Shipment`/`ShippingMethod` (Order: keep touch
   minimal — 4 Mollie traits already) → assets entrypoint imports →
   `make init` (MySQL 8.4) → sandbox `ENVIATODO_TOKEN` → health commands (§8).
+  As built: programmatic order placement in admin scenarios (avoids shop/admin
+  step-definition collision); example-factory method creation (PHPStan caught
+  `addChannel()` misuse); TestApplication frontend build prerequisite
+  (`yarn install` + `encore dev` + `assets:install`); test DB reuses granted
+  empty `sylius` DB (no `CREATE` privilege — documented in `.env.test.local`);
+  `@enviatodo_live` excluded by default; shop UI flows need Chrome
+  (`@javascript`, non-JS LiveComponent add-to-cart silently no-ops).
 
 ## 10. Explicitly deferred (vanilla-only rule)
 
@@ -295,8 +326,10 @@ actually present in a target app.
 `Component/` framework-free; no autowiring in shipped config;
 `test-application` never in `require`; single `twig_hooks`/Bootstrap-5 path;
 `success`-flag checks; null-`data`/`error` = success; coerce loose scalars;
-`recipient` always sent; slash kept; GET deletes; token env-only. Human-needed:
-fresh sandbox token + prod base URL at integration time.
+`recipient` always sent; slash kept; GET deletes; token env-only. Sandbox token
+PROVEN LIVE 2026-09-22 (balance 9717.82 MXN; quote returned 4 rows
+ESTAFETA/DHL with MXN totals and uuid). Prod base URL still open at
+integration time.
 
 ## 12. Appendix — Furgonetka mirror/skip list (verified file inventory, Sylius 2.x only)
 
@@ -333,4 +366,26 @@ Skip: `services_v1.yaml`, `api_mapping/v1/*`, `app/v1/views.yaml`,
 `DataPersister/Provider`, `sylius_ui` events, `MAJOR_VERSION` switches,
 MySQL-only migrations, iframe/welcome/error/advanced screens, OAuth
 controllers (static Bearer needs only a validate/reconnect check on admin
-entry), `liip/imagine` hard dep.
+  entry), `liip/imagine` hard dep.
+
+## 13. Live lessons (paid for in debugging time)
+
+- L1 plain controllers: `AbstractController` services without autoconfiguration
+  never get `setContainer()` → live 500 “has no container set”. Fix: plain
+  final classes + `controller.service_arguments` only (Mollie convention).
+- L2 `hasExtension()` inside `Extension::load()` is unreliable (`load()` runs on
+  a temp container copy) → set the `ui_enabled` flag in `prepend()` instead.
+- L3 `config/services/**` glob imports everything beneath it — UI-only file had
+  to move to top-level `config/twig.xml` or the gate is bypassed.
+- L4 LiveComponent add-to-cart is JS-only (core's own scenario is
+  `@mink:chromedriver`); non-JS UI checkout silently no-ops. Chrome needs
+  `--remote-allow-origins=*` (CDP rejects otherwise) plus warm start (first WS
+  connect races).
+- L5 Suite step collision: shop addressing + admin login both define the
+  password step → place orders programmatically in admin-suite scenarios.
+- L6 Reference-clone drift: workspace `Sylius/` is v2.3.0-dev (`.php` configs)
+  vs vendored v2.2.9 (XML) — verify service ids/annotations against `vendor/`,
+  treat the clone as indicative only.
+- L7 Env facts: MariaDB 11.8.8 (not MySQL 8.4); test DB is `sylius`, dev DB
+  `sylius_dev`; MySQL `root` unreachable → reuse granted DBs; dev server moved
+  `:8001` → `:8000`.
