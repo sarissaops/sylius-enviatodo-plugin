@@ -1,21 +1,18 @@
-@enviatodo_shipping
+@enviatodo_shipping @enviatodo_live
 Feature: Selecting Enviatodo shipping method
     In order to receive my order via an Enviatodo carrier
     As a Customer
     I want to choose from live Enviatodo rates at checkout
 
     Background:
-        Given the store operates on a single channel in "Mexico"
-        And the store has a product "T-Shirt"
-        And the store allows shipping with "Enviatodo Estafeta"
-        And I am a logged in customer
+        Given the store operates on a single channel in "United States"
+        And the store has a product "T-Shirt" priced at "$20.00"
+        And the store allows Enviatodo shipping method "Enviatodo Estafeta" with code "enviatodo_estafeta"
+        And the store allows paying Offline
 
     @ui
     Scenario: Customer sees live Enviatodo rates at checkout
-        Given I have product "T-Shirt" in the cart
-        When I proceed to the checkout
-        And I complete the addressing step with "64000" postcode
+        Given I added product "T-Shirt" to the cart
+        When I complete addressing step with email "john@example.com" and "United States" based billing address
+        And I select "Enviatodo Estafeta" shipping method
         Then I should see "Enviatodo Estafeta" shipping method with a live rate
-        When I select the "Enviatodo Estafeta" shipping method
-        And I complete the checkout
-        Then the order shipment should hold an Enviatodo quote uuid

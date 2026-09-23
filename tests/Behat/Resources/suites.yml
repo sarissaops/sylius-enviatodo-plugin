@@ -1,4 +1,50 @@
-# Put your Behat suites definitions here (Step 7: enviatodo_shipping, enviatodo_config)
+# Put your Behat suites definitions here
 
 default:
-    suites: ~
+    suites:
+        selecting_enviatodo_shipping_method:
+            contexts:
+                - sylius.behat.context.hook.doctrine_orm
+                - sylius.behat.context.transform.lexical
+                - sylius.behat.context.transform.product
+                - sylius.behat.context.transform.address
+                - sylius.behat.context.transform.shipping_method
+                - sylius.behat.context.transform.payment
+                - sylius.behat.context.setup.channel
+                - sylius.behat.context.setup.product
+                - sylius.behat.context.setup.shipping
+                - sylius.behat.context.setup.payment
+                - sylius.behat.context.ui.shop.cart
+                - sylius.behat.context.ui.shop.checkout
+                - sylius.behat.context.ui.shop.checkout.addressing
+                - sylius.behat.context.ui.shop.checkout.shipping
+                - sylius.behat.context.ui.shop.checkout.complete
+                - sylius.behat.context.ui.shop.checkout.thank_you
+                - sarissaops_enviatodo.behat.context.setup.enviatodo
+                - sarissaops_enviatodo.behat.context.ui.shop.selecting
+
+            filters:
+                tags: "@enviatodo_shipping"
+
+        admin_enviatodo_tracking:
+            contexts:
+                - sylius.behat.context.hook.doctrine_orm
+                - sylius.behat.context.transform.lexical
+                - sylius.behat.context.transform.product
+                - sylius.behat.context.transform.address
+                - sylius.behat.context.transform.shipping_method
+                - sylius.behat.context.transform.payment
+                - sylius.behat.context.transform.order
+                - sylius.behat.context.setup.channel
+                - sylius.behat.context.setup.product
+                - sylius.behat.context.setup.shipping
+                - sylius.behat.context.setup.payment
+                - sylius.behat.context.setup.admin_security
+                - sylius.behat.context.setup.order
+                - sylius.behat.context.ui.admin.login
+                - sylius.behat.context.ui.admin.managing_orders
+                - sarissaops_enviatodo.behat.context.setup.enviatodo
+                - sarissaops_enviatodo.behat.context.ui.admin.viewing
+
+            filters:
+                tags: "@enviatodo_config"

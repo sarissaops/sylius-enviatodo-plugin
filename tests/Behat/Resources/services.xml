@@ -3,6 +3,22 @@
 <container xmlns="http://symfony.com/schema/dic/services" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
     <services>
         <defaults public="true" />
-        <!-- Put your Behat services here (Step 7) -->
+
+        <service id="sarissaops_enviatodo.behat.context.setup.enviatodo" class="Tests\SarissaOps\SyliusEnviatodoPlugin\Behat\Context\Setup\EnviatodoSetupContext">
+            <argument type="service" id="sylius.behat.shared_storage" />
+            <argument type="service" id="sylius.fixture.example_factory.shipping_method" />
+            <argument type="service" id="sylius.repository.order" />
+            <argument type="service" id="doctrine" />
+        </service>
+
+        <service id="sarissaops_enviatodo.behat.context.ui.shop.selecting" class="Tests\SarissaOps\SyliusEnviatodoPlugin\Behat\Context\Ui\Shop\SelectingEnviatodoMethodContext">
+            <argument type="service" id="sylius.behat.page.shop.checkout.select_shipping" />
+        </service>
+
+        <service id="sarissaops_enviatodo.behat.page.admin.order.show" class="Tests\SarissaOps\SyliusEnviatodoPlugin\Behat\Page\Admin\Order\ShowPage" parent="sylius.behat.page.admin.order.show" public="false" />
+
+        <service id="sarissaops_enviatodo.behat.context.ui.admin.viewing" class="Tests\SarissaOps\SyliusEnviatodoPlugin\Behat\Context\Ui\Admin\ViewingEnviatodoTrackingContext">
+            <argument type="service" id="sarissaops_enviatodo.behat.page.admin.order.show" />
+        </service>
     </services>
 </container>
