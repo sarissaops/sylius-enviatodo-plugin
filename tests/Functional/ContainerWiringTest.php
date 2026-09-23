@@ -96,6 +96,21 @@ final class ContainerWiringTest extends TestCase
         $this->assertCount(1, $tags);
     }
 
+    public function testControllersArePlainCallables(): void
+    {
+        $container = $this->build();
+
+        foreach ([
+            'sarissaops_enviatodo.controller.shop.quote',
+            'sarissaops_enviatodo.controller.admin.shipment_bulk',
+            'sarissaops_enviatodo.controller.admin.pickup',
+        ] as $id) {
+            $definition = $container->getDefinition($id);
+            $this->assertCount(1, $definition->getTag('controller.service_arguments'), $id);
+            $this->assertFalse($definition->hasTag('container.service_subscriber'), $id);
+        }
+    }
+
     public function testExtensionExposesParametersAndValidationGroup(): void
     {
         $container = $this->build();

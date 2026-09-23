@@ -6,14 +6,13 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
-final class ShipmentBulkController extends AbstractController
+final class ShipmentBulkController
 {
     public const CSRF_TOKEN_ID = 'enviatodo_bulk_labels';
 

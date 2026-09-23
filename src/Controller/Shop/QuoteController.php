@@ -9,14 +9,13 @@ use SarissaOps\Enviatodo\Exception\HttpClientException;
 use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
-final class QuoteController extends AbstractController
+final class QuoteController
 {
     public const CSRF_TOKEN_ID = 'enviatodo_quote';
 

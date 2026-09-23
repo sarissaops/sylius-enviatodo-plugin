@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPickupScheduler;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
-final class PickupController extends AbstractController
+final class PickupController
 {
     public const CSRF_TOKEN_ID = 'enviatodo_pickup';
 
