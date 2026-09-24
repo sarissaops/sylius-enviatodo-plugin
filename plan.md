@@ -1,16 +1,18 @@
 # Plan — `sarissaops/sylius-enviatodo-plugin` (build inside `SyliusEnviatodoPlugin/`)
 
-> Status 2026-09-23, rev 5 — COMPLETE. Steps 0–7 built, gated green, and
-> live-verified against `sylius-dev-env` on `:8001` (later moved to `:8000`;
-> re-verify on publish). Commits `2e3f0ff` → `3868055` in
-> `SyliusEnviatodoPlugin/` (local only, unpushed, unreleased). Final gates:
-> phpunit 108 tests / 284 assertions green; Behat 5 scenarios / 81 steps green
-> (`@enviatodo_live` suite defined, excluded by default); PHPStan level max
-> clean; ECS clean. Live proof: 16 enviatodo routes, calculator in
-> `sylius.shipping_calculators`, validation group appended, tracking hook
+> Status 2026-09-24, rev 6 — COMPLETE. Steps 0–7 built, gated green, and
+> live-verified against `sylius-dev-env` on `:8000`. Commits `2e3f0ff` →
+> `709d4ce` in `SyliusEnviatodoPlugin/` (local only, unpushed, unreleased).
+> Final gates: phpunit 108 tests / 236 assertions green; Behat: 2 plugin
+> scenarios + 2 smoke scenarios green (live `@enviatodo_live` tag excluded via
+> CLI, no such suite); PHPStan level max clean; ECS clean. Live proof:
+> 14 MVC routes (13 admin + 1 shop) + 2 API Platform ops, calculator in
+> `sylius.shipping_calculator`, validation group appended, tracking hook
 > enabled, CSRF guards return 403, OpenAPI lists both plugin ops, shop/admin
-> unregressed, all 4 migrations applied on MariaDB with snake_case columns
-> matching 1:1. Parent: `../PROJECT_MASTER_PLAN.md` (§§1–7).
+> unregressed, the 2 MySQL migrations applied on MariaDB (PG pair excluded by
+> platform) with snake_case columns matching 1:1. Old empty
+> `sylius-enviatodo-plugin/` retired (gone). Parent:
+> `../PROJECT_MASTER_PLAN.md` (§§1–7).
 > Locked: style = **ECS only** (`sylius-labs/coding-standard`, never standalone
 > php-cs-fixer); vendor = **`sarissaops`**; git = **init here, retire the old
 > empty `sylius-enviatodo-plugin/`**. Methodology: BDD (Behat) outside, TDD
@@ -209,7 +211,8 @@ with early-return); packaging `../composer/`+`../flex/` (§7); full-store E2E
 `require: php ^8.2, sylius/sylius ^2.1` (installed 2.2.9),
 `sarissaops/enviatodo-bundle ^0.1`; `require-dev: behat, friends-of-behat/*,
 sylius/test-application ^2.0` (never `require`), `phpunit ^10.5, phpstan ^2.2,
-lchrusciel/api-test-case, sylius-labs/coding-standard` (no cs-fixer — decided);
+sylius-labs/coding-standard` (no cs-fixer — decided; no `lchrusciel/api-test-case`,
+deferred);
 `extra: branch-alias dev-main→0.1.x-dev, symfony.require ^7.4`;
 `sort-packages`; lock git-ignored; `.gitattributes` export-ignore
 (`/.github/ /tests dev-dist QA configs README CHANGELOG`); `composer validate`
@@ -220,10 +223,10 @@ clean. Flex auto-registers from the `*Plugin`+`Bundle`-base heuristic — ship n
 
 ```
 composer validate
-vendor/bin/phpunit                                   # unit/functional/integration (+api)
-vendor/bin/behat --strict --tags="~@javascript&&~@mink:chromedriver"   # JS: APP_ENV=test server :8080 + Chrome :9222
+vendor/bin/phpunit                                   # unit/functional/integration/e2e suites (no tests/Api dir)
+vendor/bin/behat --strict --tags="~@javascript&&~@mink:chromedriver&&~@enviatodo_live"   # JS: APP_ENV=test server :8080 + Chrome :9222; live tag excluded via CLI
 vendor/bin/phpstan analyse -c phpstan.neon -l max src/                 # zero baseline
-vendor/bin/ecs check                                 # scope src + tests/{Api,Behat,Unit}
+vendor/bin/ecs check                                 # scope src + tests/Behat only
 composer run database-reset                          # restore script in Step 0
 # instance health (Standard/TestApplication):
 bin/console lint:container && bin/console debug:router | grep -i envia \
@@ -250,16 +253,16 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   files); adapter tests = real class + mocked transport asserting
   URI/method/body with `null`=wildcard. Exit: purchasable rates, uuid held.
 - **Step 2 — Buy label (API #5, #12) ✓ (`b7c12b1`).** `OrderPaidListener` → balance guard →
-  `create_order` → persist tracking/`file_id`/summary → dual
+  `create_order` → persist tracking/guide/amount (no `file_id`/`summary`/`trx_id`
+  columns — create response carries summary + guides only) → dual
   migrations → repos. Addition: two-phase draft→complete (draft holds uuid at
   checkout, completion spends it post-payment); `EnviatodoOrderManagerInterface`
   + `EnviatodoShipmentRepositoryInterface` extracted (final classes unmockable);
-  scoped `property.unusedType` ignore for Doctrine ids (documented, no baseline);
-  no `trx_id` persisted (create response carries summary + guides only).
+  scoped `property.unusedType` ignore for Doctrine ids (documented, no baseline).
   Exit: paid order → shippable label.
 - **Step 3 — Labels/tracking/cancel/handover (API #6–11 + local state) ✓ (`b306e6a`).**
-  Order-show shipment panels (hook `.item.general` for tracking, `.item.actions`
-  for label/ship buttons); download + bulk-binary (+`invalid_files[]` retry,
+  Order-show tracking panel (hook `sylius_admin.order.show.content.sections#right`,
+  per `config/twig_hooks/admin.yaml:3`); download + bulk-binary (+`invalid_files[]` retry,
   ~10 chunks, custom grid `bulk` action — core grids define none); tracking sync
   via `StatusMap`; cancel → *pending*. Handover state on the shipment extension
   (`label_created → [dropped_at_branch(+branch ref) | in_pickup] → in_transit →
@@ -283,8 +286,8 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   `messenger=input`: synchronous JSON needs no bus surface — KISS deviation),
   DTO groups/validation via PHP attributes on our own classes (XML reserved
   for third-party-class mappings), provider/processor unit tests
-  (`api-test-case` deferred with Step 7 DB infra), `es`-primary translations,
-  UI wiring gated behind Twig presence. Known-remaining: §14 P0/P1. Exit: headless parity.
+  (`api-test-case` deferred with Step 7 DB infra), validators `en`/`es` translations only,
+  UI wiring gated behind Twig presence. Known-remaining: §14 P1 nested-schema test.
 - **Step 7 — E2E ✓ (`3868055`).** Behat file set (skeleton shape): `behat.yml.dist`
   (`%env(BEHAT_BASE_URL)%` + `SuiteTagsExtension`, imports core `suites.yml` +
   `tests/Behat/Resources/suites.yml`); `suites.yml` (core `doctrine_orm` +
@@ -361,6 +364,13 @@ write-time −14d prune + export/reset (context carries
 `uuid→order→guide/pickup`); settings key-value with hidden-secret filter;
 `MENU_SECTIONS page=>companyOnly` + Twig fn + grid option for company gating.
 
+Status: built — calculator adapter + validation pass + compiler pass + CSRF AJAX
+quote endpoint + class-constraint validator + `ProviderMap`. Deferred (no BDD
+scenario required them): `Serializer/OrderNormalizer`, company menu gating,
+order grid action, settings/logs entities, checkout form extension,
+`validatePoint`/`resolveCart` pickup-point shape (our checkout needs none of
+it), `enviatodo-shop.js`, `EnviatodoSettingResource`. See §10.
+
 Skip: `services_v1.yaml`, `api_mapping/v1/*`, `app/v1/views.yaml`,
 `views/{admin,shop}/v1/**`, `public/{js/v1,css/v1}`, APIP-2
 `DataPersister/Provider`, `sylius_ui` events, `MAJOR_VERSION` switches,
@@ -389,26 +399,25 @@ controllers (static Bearer needs only a validate/reconnect check on admin
 - L7 Env facts: MariaDB 11.8.8 (not MySQL 8.4); test DB is `sylius`, dev DB
   `sylius_dev`; MySQL `root` unreachable → reuse granted DBs; dev server moved
   `:8001` → `:8000`.
-- L8 Template context fallback: our tracking template reads
-  `hookable_metadata.context.order`, but all ~98 core admin order fragments read
-  `.resource` — `order` arrives only via metadata-name leakage. A themed/custom
-  order controller rendering with just `resource` silences our panel with no
-  log. Fix (open): `{% set enviatodo_order = hookable_metadata.context.resource
-  ?? hookable_metadata.context.order ?? null %}` + a test rendering with only
-  `resource` in context.
+- L8 Template context fallback: DONE — tracking template reads
+  `hookable_metadata.context.resource ?? hookable_metadata.context.order`,
+  covered by `tests/Unit/Twig/TrackingTemplateTest.php` (order-context /
+  resource-context / empty cases).
 - L9 Theme override path: `<theme>/templates/bundles/SarissaOpsSyliusEnviatodoPlugin/admin/order/tracking.html.twig`
   (literal `Plugin`, no `Bundle` suffix — `NamespacedTemplateLocator.php:59-66`);
   document it in README. Hook names are theme-stable; emission depends on the
   theme keeping `{% hook %}` tags (inherent to the hooks design, not our bug).
 
-## 14. Known-remaining API gaps (headless audit, unverified code — fix next)
+## 14. Known-remaining API gaps (headless audit — P0/P1 done, one test open)
 
-- P0 scope the shop lookup: `ShipmentLiveRates.xml` `shipmentId` lacks
-  `fromProperty="order"`; `LiveRatesProcessor` uses bare `findOneBy(token)` —
-  cross-order/cross-channel replay works today. Fix: scoped cart-only query +
-  channel + state checks (cf. core `Order.xml:210-213`, `ItemProvider.php:39-60`).
-- P0 error mapping: SDK/`InvalidArgument` failures bubble as 500 HTML, not
-  ApiProblem JSON; bulk silent-empty-200 on unknown ids. Fix: 502/422 mapping
-  mirroring `QuoteController`, `<openapi><responses>` per op.
-- P1 explicit `<validationContext>`, `Positive`/`Collection` DTO tightening,
-  `status="200"` on the shop op (implicit 201 today), nested-schema render test.
+- P0 scope the shop lookup: DONE — `fromProperty="order"` on `shipmentId`,
+  cart-only scoped query + channel + `STATE_CART` checks in
+  `LiveRatesProcessor.php`, `UnprocessableEntityHttpException` otherwise.
+- P0 error mapping: DONE — `InvalidArgument` → 422, SDK/runtime faults →
+  502 (`HttpException`), bulk empty resolution → 422; `<openapi><responses>`
+  200/404/422/502 on both ops.
+- P1 explicit `<validationContext>` (group `Default`), `Positive` on quantity
+  and ids, `status="200"` on the shop op: DONE.
+- P1 nested-schema render test: OPEN — groups cascade correctly by construction
+  (nested scalars repeat the `show` group), but no test asserts nested
+  `rates[]`/`files[]` render under it.
