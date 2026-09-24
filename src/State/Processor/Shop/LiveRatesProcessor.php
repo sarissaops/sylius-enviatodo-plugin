@@ -17,6 +17,7 @@ use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
 use Sylius\Component\Channel\Context\ChannelContextInterface;
 use Sylius\Component\Core\Model\OrderInterface;
+use Sylius\Component\Core\Model\ShipmentInterface;
 use Sylius\Component\Core\OrderCheckoutStates;
 use Sylius\Component\Core\Repository\OrderRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -25,7 +26,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
  * Guest-accessible live rates for one checkout shipment. The order token in
- * the URI scopes the lookup to the request channel's active cart; upstream
+ * the URI scopes the lookup to the request channel's active checkout; upstream
  * failures map to API-problem statuses instead of HTML 500s.
  *
  * @implements ProcessorInterface<LiveRatesQuoteRequest, LiveRatesResult>
@@ -42,7 +43,7 @@ final class LiveRatesProcessor implements ProcessorInterface
     }
 
     /**
-     * @param array<string, string> $uriVariables
+     * @param array<string, mixed> $uriVariables API Platform injects resolved entities for fromClass variables.
      * @param array<string, mixed> $context
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): LiveRatesResult
@@ -51,32 +52,34 @@ final class LiveRatesProcessor implements ProcessorInterface
             throw new \InvalidArgumentException('Live rates require a LiveRatesQuoteRequest payload.');
         }
 
-        $tokenValue = $uriVariables['tokenValue'] ?? null;
-        $shipmentId = $uriVariables['shipmentId'] ?? null;
-        if (!\is_string($tokenValue) || '' === $tokenValue || !\is_string($shipmentId) || '' === $shipmentId) {
-            throw new NotFoundHttpException('Order or shipment not found.');
+        $order = $uriVariables['tokenValue'] ?? null;
+        if (\is_string($order)) {
+            $order = '' !== $order ? $this->orderRepository->findOneBy(['tokenValue' => $order]) : null;
         }
-
-        $order = $this->orderRepository->findOneBy(['tokenValue' => $tokenValue]);
-        if (null === $order) {
+        if (!$order instanceof OrderInterface) {
             throw new NotFoundHttpException('Order not found.');
         }
         if ($order->getChannel()?->getCode() !== $this->channelContext->getChannel()->getCode()) {
             throw new NotFoundHttpException('Order not found.');
         }
-        if ($order->getCheckoutState() !== OrderCheckoutStates::STATE_CART) {
-            throw new UnprocessableEntityHttpException('Live rates require an active cart.');
+        if (!\in_array($order->getCheckoutState(), [OrderCheckoutStates::STATE_CART, OrderCheckoutStates::STATE_ADDRESSED, OrderCheckoutStates::STATE_SHIPPING_SELECTED], true)) {
+            throw new UnprocessableEntityHttpException('Live rates require an active checkout.');
         }
 
-        $shipment = null;
-        foreach ($order->getShipments() as $candidate) {
-            if ($candidate->getId() === (int) $shipmentId) {
-                $shipment = $candidate;
+        $shipment = $uriVariables['shipmentId'] ?? null;
+        if (!\is_object($shipment)) {
+            $shipment = null;
+            $wantedId = $uriVariables['shipmentId'] ?? null;
+            $wantedId = \is_scalar($wantedId) ? (int) $wantedId : 0;
+            foreach ($order->getShipments() as $candidate) {
+                if ($candidate->getId() === $wantedId) {
+                    $shipment = $candidate;
 
-                break;
+                    break;
+                }
             }
         }
-        if (null === $shipment) {
+        if (!$shipment instanceof ShipmentInterface || $shipment->getOrder() !== $order) {
             throw new NotFoundHttpException('Shipment not found.');
         }
 

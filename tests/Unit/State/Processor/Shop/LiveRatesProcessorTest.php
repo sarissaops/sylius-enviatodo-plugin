@@ -17,8 +17,8 @@ use SarissaOps\SyliusEnviatodoPlugin\State\Processor\Shop\LiveRatesProcessor;
 use Sylius\Component\Channel\Context\ChannelContextInterface;
 use Sylius\Component\Channel\Model\ChannelInterface;
 use Sylius\Component\Core\Model\OrderInterface;
+use Sylius\Component\Core\Model\ShipmentInterface;
 use Sylius\Component\Core\Repository\OrderRepositoryInterface;
-use Sylius\Component\Shipping\Model\ShipmentInterface;
 use Sylius\Component\Shipping\Model\ShippingMethodInterface;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -77,15 +77,16 @@ final class LiveRatesProcessorTest extends TestCase
     {
         $method = $this->createMock(ShippingMethodInterface::class);
         $method->method('getCode')->willReturn($methodCode);
-        $shipment = $this->createMock(ShipmentInterface::class);
-        $shipment->method('getId')->willReturn($shipmentId);
-        $shipment->method('getMethod')->willReturn($method);
         $channel = $this->createMock(ChannelInterface::class);
         $channel->method('getCode')->willReturn($channelCode);
         $order = $this->createMock(OrderInterface::class);
-        $order->method('getShipments')->willReturn(new ArrayCollection([$shipment]));
         $order->method('getChannel')->willReturn($channel);
         $order->method('getCheckoutState')->willReturn($checkoutState);
+        $shipment = $this->createMock(ShipmentInterface::class);
+        $shipment->method('getId')->willReturn($shipmentId);
+        $shipment->method('getMethod')->willReturn($method);
+        $shipment->method('getOrder')->willReturn($order);
+        $order->method('getShipments')->willReturn(new ArrayCollection([$shipment]));
 
         return $order;
     }
@@ -164,6 +165,40 @@ final class LiveRatesProcessorTest extends TestCase
             new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
             new \ApiPlatform\Metadata\Post(),
             $this->uriVariables(),
+        );
+    }
+
+    public function testProcessAcceptsResolvedEntities(): void
+    {
+        [$orderRepository, , , $processor] = $this->processor();
+        $orderRepository->expects($this->never())->method('findOneBy');
+        $order = $this->orderWithShipment(5, 'enviatodo_estafeta', 'WEB', 'addressed');
+        $shipment = $order->getShipments()->first();
+
+        $payload = $this->quotePayload();
+        $result = $processor->process(
+            new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
+            new \ApiPlatform\Metadata\Post(),
+            ['tokenValue' => $order, 'shipmentId' => $shipment],
+        );
+
+        $this->assertSame('uuid-1', $result->transactionUuid);
+        $this->assertCount(1, $result->rates);
+    }
+
+    public function testProcessRejectsShipmentsFromOtherOrders(): void
+    {
+        [$orderRepository, , , $processor] = $this->processor();
+        $orderRepository->expects($this->never())->method('findOneBy');
+        $other = $this->orderWithShipment(9, 'enviatodo_estafeta');
+
+        $payload = $this->quotePayload();
+
+        $this->expectException(NotFoundHttpException::class);
+        $processor->process(
+            new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
+            new \ApiPlatform\Metadata\Post(),
+            ['tokenValue' => $this->orderWithShipment(5, 'enviatodo_estafeta'), 'shipmentId' => $other->getShipments()->first()],
         );
     }
 
