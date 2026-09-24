@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator;
 
 use SarissaOps\Enviatodo\Api\QuoteApi;
+use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
+use SarissaOps\Enviatodo\Model\ZipCode\ZipCode;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\DestinationAddress;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotedRates;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\RateResult;
 
@@ -15,8 +18,10 @@ use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\RateResult;
  */
 final class EnviatodoCalculator
 {
-    public function __construct(private readonly QuoteApi $quoteApi)
-    {
+    public function __construct(
+        private readonly QuoteApi $quoteApi,
+        private readonly ZipCodeApi $zipCodeApi,
+    ) {
     }
 
     /**
@@ -45,6 +50,52 @@ final class EnviatodoCalculator
         }
 
         return new QuotedRates($result->getTransactionUuid(), $rates);
+    }
+
+    /**
+     * Quotes a checkout destination: resolves the settlement from the zip-code
+     * catalog, then matches one provider pair. Returns null when the catalog
+     * has no settlement or the quote carries no matching available row —
+     * callers turn that into a hidden method, never a zero price.
+     *
+     * @param array<string, mixed> $quoteConfig method configuration: full `origin` address + `package`
+     * @param array{fullName: string, email: string, telephone: string, street: string, postcode: string, countryCode: string} $contact
+     */
+    public function rateForAddress(array $quoteConfig, array $contact, string $providerId, string $serviceId): ?RateResult
+    {
+        $origin = $quoteConfig['origin'] ?? null;
+        if (!\is_array($origin) || [] === $origin) {
+            throw new \InvalidArgumentException('Enviatodo method configuration requires a full "origin" address.');
+        }
+        $package = $quoteConfig['package'] ?? null;
+        if (!\is_array($package) || [] === $package) {
+            throw new \InvalidArgumentException('Enviatodo method configuration requires a "package" definition.');
+        }
+
+        $postcode = trim($contact['postcode']);
+        if ('' === $postcode) {
+            return null;
+        }
+        $settlement = $this->zipCodeApi->show($postcode);
+        if (!$settlement instanceof ZipCode || [] === $settlement->getItems()) {
+            return null;
+        }
+
+        $payload = [
+            'shipping_type' => $quoteConfig['shipping_type'] ?? '1',
+            'quantity' => $quoteConfig['quantity'] ?? 1,
+            'origin' => $origin,
+            'destination' => DestinationAddress::fromParts($contact, $settlement->getItems()[0]),
+            'package' => $package,
+        ];
+
+        foreach ($this->rates($payload, $providerId, $serviceId)->getRates() as $rate) {
+            if ($rate->getProviderId() === $providerId && $rate->getProviderServiceId() === $serviceId) {
+                return $rate;
+            }
+        }
+
+        return null;
     }
 
     /**

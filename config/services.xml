@@ -24,6 +24,7 @@
 
         <service id="sarissaops_enviatodo.component_calculator" class="SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator">
             <argument type="service" id="sarissaops_enviatodo.quote_api" />
+            <argument type="service" id="sarissaops_enviatodo.zip_code_api" />
         </service>
 
         <service id="sarissaops_enviatodo.shipping_calculator" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoShippingCalculator">

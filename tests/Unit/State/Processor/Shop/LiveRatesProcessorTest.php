@@ -7,6 +7,7 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\State\Processor\Shop;
 use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 use SarissaOps\Enviatodo\Api\QuoteApi;
+use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Exception\EnviatodoException;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesQuoteRequest;
@@ -61,7 +62,7 @@ final class LiveRatesProcessorTest extends TestCase
             ],
         ]));
 
-        $calculator = new EnviatodoCalculator($quoteApi);
+        $calculator = new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class));
         $processor = new LiveRatesProcessor(
             $orderRepository,
             $channelContext,
@@ -194,7 +195,7 @@ final class LiveRatesProcessorTest extends TestCase
         $processor = new LiveRatesProcessor(
             $orderRepository,
             $channelContext,
-            new EnviatodoCalculator($quoteApi),
+            new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)),
             new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
         );
 

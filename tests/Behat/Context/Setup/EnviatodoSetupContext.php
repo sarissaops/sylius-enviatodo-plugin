@@ -71,8 +71,25 @@ final class EnviatodoSetupContext implements Context
         return [
             'shipping_type' => '1',
             'quantity' => 1,
-            'origin' => ['zip_code' => '64000'],
-            'destination' => ['zip_code' => '06600'],
+            // Warehouse origin: full address block, exactly what rates_client requires.
+            'origin' => [
+                'address_type_id' => '1',
+                'full_name' => 'Tienda Norte',
+                'email' => 'tienda@example.com',
+                'telephone' => '8180808080',
+                'street' => 'JUAN IGNACIO RAMON',
+                'ext_number' => '321',
+                'int_number' => '1A',
+                'zip_code' => '64000',
+                'suburb' => 'Monterrey Centro',
+                'municipality' => 'Monterrey',
+                'town' => 'Monterrey',
+                'state' => 'Nuevo Leon',
+                'state_code' => 'NL',
+                'country_code' => 'MX',
+            ],
+            // Shop contact phone: checkout collects no phone, used as destination telephone fallback.
+            'contact' => ['telephone' => '8180808080'],
             'package' => [
                 'product_type' => '01010101',
                 'unit_type' => 'X1A',

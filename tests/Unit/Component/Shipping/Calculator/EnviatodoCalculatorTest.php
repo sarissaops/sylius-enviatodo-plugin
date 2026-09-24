@@ -6,7 +6,9 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\Component\Shipping\Calcula
 
 use PHPUnit\Framework\TestCase;
 use SarissaOps\Enviatodo\Api\QuoteApi;
+use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
+use SarissaOps\Enviatodo\Model\ZipCode\ZipCode;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 
 final class EnviatodoCalculatorTest extends TestCase
@@ -64,7 +66,7 @@ final class EnviatodoCalculatorTest extends TestCase
         $quoteApi = $this->createMock(QuoteApi::class);
         $quoteApi->expects($this->once())->method('all')->with($payload)->willReturn(Quote::create($this->quoteData()));
 
-        $result = (new EnviatodoCalculator($quoteApi))->rates($payload);
+        $result = (new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)))->rates($payload);
 
         $this->assertSame('uuid-1', $result->getTransactionUuid());
         $rates = $result->getRates();
@@ -82,7 +84,7 @@ final class EnviatodoCalculatorTest extends TestCase
         $quoteApi->expects($this->once())->method('byProvider')->with($payload, 9)->willReturn(Quote::create($this->quoteData()));
         $quoteApi->expects($this->never())->method('all');
 
-        $result = (new EnviatodoCalculator($quoteApi))->rates($payload, '9');
+        $result = (new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)))->rates($payload, '9');
 
         $this->assertCount(1, $result->getRates());
     }
@@ -93,7 +95,7 @@ final class EnviatodoCalculatorTest extends TestCase
         $quoteApi = $this->createMock(QuoteApi::class);
         $quoteApi->expects($this->once())->method('byService')->with($payload, 11)->willReturn(Quote::create($this->quoteData()));
 
-        $result = (new EnviatodoCalculator($quoteApi))->rates($payload, null, '11');
+        $result = (new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)))->rates($payload, null, '11');
 
         $this->assertCount(1, $result->getRates());
     }
@@ -105,7 +107,7 @@ final class EnviatodoCalculatorTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
 
-        (new EnviatodoCalculator($quoteApi))->rates($this->quotePayload());
+        (new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)))->rates($this->quotePayload());
     }
 
     public function testRateForReturnsMatchingAvailableService(): void
@@ -113,7 +115,7 @@ final class EnviatodoCalculatorTest extends TestCase
         $quoteApi = $this->createMock(QuoteApi::class);
         $quoteApi->method('byService')->willReturn(Quote::create($this->quoteData()));
 
-        $rate = (new EnviatodoCalculator($quoteApi))->rateFor($this->quotePayload(), '9', '11');
+        $rate = (new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)))->rateFor($this->quotePayload(), '9', '11');
 
         $this->assertNotNull($rate);
         $this->assertSame(23200, $rate->getAmountMinor());
@@ -124,9 +126,73 @@ final class EnviatodoCalculatorTest extends TestCase
         $quoteApi = $this->createMock(QuoteApi::class);
         $quoteApi->method('byService')->willReturn(Quote::create($this->quoteData()));
 
-        $calculator = new EnviatodoCalculator($quoteApi);
+        $calculator = new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class));
 
         $this->assertNull($calculator->rateFor($this->quotePayload(), '9', '12'));
         $this->assertNull($calculator->rateFor($this->quotePayload(), '5', '6'));
+    }
+
+    public function testRateForAddressResolvesSettlementAndMatchesService(): void
+    {
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->expects($this->once())->method('byService')->with(
+            $this->callback(static fn (array $payload): bool => 'Juárez' === ($payload['destination']['suburb'] ?? null)
+                && '64000' === ($payload['origin']['zip_code'] ?? null)),
+            11,
+        )->willReturn(Quote::create($this->quoteData()));
+        $zipCodeApi = $this->createMock(ZipCodeApi::class);
+        $zipCodeApi->expects($this->once())->method('show')->with('06600')->willReturn(ZipCode::create([
+            'component' => 'zip',
+            'type' => 'list',
+            'items' => [[
+                'zip_code' => '06600',
+                'suburb_name' => 'Juárez',
+                'municipality' => 'Cuauhtémoc',
+                'city' => 'Ciudad de México',
+                'state' => 'Ciudad de México',
+                'state_code' => 'DF',
+            ]],
+        ]));
+
+        $rate = (new EnviatodoCalculator($quoteApi, $zipCodeApi))->rateForAddress(
+            ['origin' => ['zip_code' => '64000'], 'package' => ['bill_weight' => '1']],
+            ['fullName' => 'John Doe', 'email' => 'john@example.com', 'telephone' => '5555555555', 'street' => 'Paseo Violetas 10', 'postcode' => '06600', 'countryCode' => 'mx'],
+            '9',
+            '11',
+        );
+
+        $this->assertNotNull($rate);
+        $this->assertSame(23200, $rate->getAmountMinor());
+    }
+
+    public function testRateForAddressReturnsNullWithoutSettlement(): void
+    {
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->expects($this->never())->method('byService');
+        $zipCodeApi = $this->createMock(ZipCodeApi::class);
+        $zipCodeApi->method('show')->willReturn(ZipCode::create(['component' => 'zip', 'type' => 'list', 'items' => []]));
+
+        $rate = (new EnviatodoCalculator($quoteApi, $zipCodeApi))->rateForAddress(
+            ['origin' => ['zip_code' => '64000'], 'package' => ['bill_weight' => '1']],
+            ['fullName' => 'John Doe', 'email' => 'john@example.com', 'telephone' => '5555555555', 'street' => 'Paseo Violetas 10', 'postcode' => '00000', 'countryCode' => 'MX'],
+            '9',
+            '11',
+        );
+
+        $this->assertNull($rate);
+    }
+
+    public function testRateForAddressRejectsConfigWithoutOrigin(): void
+    {
+        $calculator = new EnviatodoCalculator($this->createMock(QuoteApi::class), $this->createMock(ZipCodeApi::class));
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $calculator->rateForAddress(
+            ['package' => ['bill_weight' => '1']],
+            ['fullName' => 'John Doe', 'email' => 'john@example.com', 'telephone' => '5555555555', 'street' => 'Paseo Violetas 10', 'postcode' => '06600', 'countryCode' => 'MX'],
+            '9',
+            '11',
+        );
     }
 }

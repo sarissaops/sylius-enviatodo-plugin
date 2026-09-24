@@ -6,6 +6,7 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\Controller\Shop;
 
 use PHPUnit\Framework\TestCase;
 use SarissaOps\Enviatodo\Api\QuoteApi;
+use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Shop\QuoteController;
@@ -42,7 +43,7 @@ final class QuoteControllerTest extends TestCase
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
 
-        return new QuoteController(new EnviatodoCalculator($quoteApi), $csrf);
+        return new QuoteController(new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)), $csrf);
     }
 
     private function quoteApi(): QuoteApi
