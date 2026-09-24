@@ -127,3 +127,14 @@ To be able to set up a plugin's database, remember to configure your database cr
     vendor/bin/console sylius:fixtures:load -n
     symfony server:start -d
     ```
+
+## Theming and headless usage
+
+The admin order-tracking panel ships as the Twig fragment
+`@SarissaOpsSyliusEnviatodoPlugin/admin/order/tracking.html.twig`, attached via
+the `sylius_admin.order.show.content.sections#right` hook (import
+`config/twig_hooks/admin.yaml` to enable it). To override it in a theme, copy it
+to `<theme>/templates/bundles/SarissaOpsSyliusEnviatodoPlugin/admin/order/tracking.html.twig`
+— note the literal `Plugin` suffix, no `Bundle` appended. For headless
+deployments, skip the `twig_hooks` import entirely: all JSON controllers and
+API Platform operations work without Twig installed.

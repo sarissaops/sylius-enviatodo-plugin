@@ -133,6 +133,7 @@
 
         <service id="sarissaops_enviatodo.state_processor.shop.live_rates" class="SarissaOps\SyliusEnviatodoPlugin\State\Processor\Shop\LiveRatesProcessor">
             <argument type="service" id="sylius.repository.order" />
+            <argument type="service" id="sylius.context.channel" />
             <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
         </service>

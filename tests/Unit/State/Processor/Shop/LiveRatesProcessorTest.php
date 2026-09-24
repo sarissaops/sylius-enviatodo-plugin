@@ -7,15 +7,19 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\State\Processor\Shop;
 use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 use SarissaOps\Enviatodo\Api\QuoteApi;
+use SarissaOps\Enviatodo\Exception\EnviatodoException;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesQuoteRequest;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
 use SarissaOps\SyliusEnviatodoPlugin\State\Processor\Shop\LiveRatesProcessor;
+use Sylius\Component\Channel\Context\ChannelContextInterface;
+use Sylius\Component\Channel\Model\ChannelInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Repository\OrderRepositoryInterface;
 use Sylius\Component\Shipping\Model\ShipmentInterface;
 use Sylius\Component\Shipping\Model\ShippingMethodInterface;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
@@ -35,10 +39,14 @@ final class LiveRatesProcessorTest extends TestCase
         ];
     }
 
-    /** @return array{OrderRepositoryInterface, EnviatodoCalculator, LiveRatesProcessor} */
+    /** @return array{OrderRepositoryInterface, ChannelContextInterface, EnviatodoCalculator, LiveRatesProcessor} */
     private function processor(): array
     {
         $orderRepository = $this->createMock(OrderRepositoryInterface::class);
+        $channel = $this->createMock(ChannelInterface::class);
+        $channel->method('getCode')->willReturn('WEB');
+        $channelContext = $this->createMock(ChannelContextInterface::class);
+        $channelContext->method('getChannel')->willReturn($channel);
         $quoteApi = $this->createMock(QuoteApi::class);
         $quoteApi->method('all')->willReturn(Quote::create([
             'transaction' => ['type' => 'order', 'timestamp' => '2026-01-01', 'uuid' => 'uuid-1'],
@@ -53,24 +61,30 @@ final class LiveRatesProcessorTest extends TestCase
             ],
         ]));
 
+        $calculator = new EnviatodoCalculator($quoteApi);
         $processor = new LiveRatesProcessor(
             $orderRepository,
-            new EnviatodoCalculator($quoteApi),
+            $channelContext,
+            $calculator,
             new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
         );
 
-        return [$orderRepository, new EnviatodoCalculator($quoteApi), $processor];
+        return [$orderRepository, $channelContext, $calculator, $processor];
     }
 
-    private function orderWithShipment(int $shipmentId, string $methodCode): OrderInterface
+    private function orderWithShipment(int $shipmentId, string $methodCode, string $channelCode = 'WEB', string $checkoutState = 'cart'): OrderInterface
     {
         $method = $this->createMock(ShippingMethodInterface::class);
         $method->method('getCode')->willReturn($methodCode);
         $shipment = $this->createMock(ShipmentInterface::class);
         $shipment->method('getId')->willReturn($shipmentId);
         $shipment->method('getMethod')->willReturn($method);
+        $channel = $this->createMock(ChannelInterface::class);
+        $channel->method('getCode')->willReturn($channelCode);
         $order = $this->createMock(OrderInterface::class);
         $order->method('getShipments')->willReturn(new ArrayCollection([$shipment]));
+        $order->method('getChannel')->willReturn($channel);
+        $order->method('getCheckoutState')->willReturn($checkoutState);
 
         return $order;
     }
@@ -83,7 +97,7 @@ final class LiveRatesProcessorTest extends TestCase
 
     public function testProcessReturnsUuidAndMappedRates(): void
     {
-        [$orderRepository, , $processor] = $this->processor();
+        [$orderRepository, , , $processor] = $this->processor();
         $orderRepository->method('findOneBy')->with(['tokenValue' => 'cart-token'])
             ->willReturn($this->orderWithShipment(5, 'enviatodo_estafeta'));
 
@@ -101,7 +115,7 @@ final class LiveRatesProcessorTest extends TestCase
 
     public function testProcessRejectsUnknownOrdersAndShipments(): void
     {
-        [$orderRepository, , $processor] = $this->processor();
+        [$orderRepository, , , $processor] = $this->processor();
         $orderRepository->method('findOneBy')->willReturn(null);
 
         $payload = $this->quotePayload();
@@ -116,7 +130,7 @@ final class LiveRatesProcessorTest extends TestCase
 
     public function testProcessRejectsMethodsOutsideTheMap(): void
     {
-        [$orderRepository, , $processor] = $this->processor();
+        [$orderRepository, , , $processor] = $this->processor();
         $orderRepository->method('findOneBy')->willReturn($this->orderWithShipment(5, 'flat_rate'));
 
         $payload = $this->quotePayload();
@@ -131,9 +145,83 @@ final class LiveRatesProcessorTest extends TestCase
 
     public function testProcessRejectsNonRequestPayloads(): void
     {
-        [, , $processor] = $this->processor();
+        [, , , $processor] = $this->processor();
 
         $this->expectException(\InvalidArgumentException::class);
         $processor->process(new \stdClass(), new \ApiPlatform\Metadata\Post(), $this->uriVariables());
+    }
+
+    public function testProcessRejectsChannelMismatch(): void
+    {
+        [$orderRepository, , , $processor] = $this->processor();
+        $orderRepository->method('findOneBy')->willReturn($this->orderWithShipment(5, 'enviatodo_estafeta', 'OTHER'));
+
+        $payload = $this->quotePayload();
+
+        $this->expectException(NotFoundHttpException::class);
+        $processor->process(
+            new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
+            new \ApiPlatform\Metadata\Post(),
+            $this->uriVariables(),
+        );
+    }
+
+    public function testProcessRejectsNonCartOrders(): void
+    {
+        [$orderRepository, , , $processor] = $this->processor();
+        $orderRepository->method('findOneBy')->willReturn($this->orderWithShipment(5, 'enviatodo_estafeta', 'WEB', 'fulfilled'));
+
+        $payload = $this->quotePayload();
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+        $processor->process(
+            new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
+            new \ApiPlatform\Metadata\Post(),
+            $this->uriVariables(),
+        );
+    }
+
+    public function testProcessMapsUpstreamFailuresToBadGateway(): void
+    {
+        $orderRepository = $this->createMock(OrderRepositoryInterface::class);
+        $orderRepository->method('findOneBy')->willReturn($this->orderWithShipment(5, 'enviatodo_estafeta'));
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->method('all')->willThrowException(new EnviatodoException('envelope error'));
+        $channel = $this->createMock(ChannelInterface::class);
+        $channel->method('getCode')->willReturn('WEB');
+        $channelContext = $this->createMock(ChannelContextInterface::class);
+        $channelContext->method('getChannel')->willReturn($channel);
+        $processor = new LiveRatesProcessor(
+            $orderRepository,
+            $channelContext,
+            new EnviatodoCalculator($quoteApi),
+            new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
+        );
+
+        $payload = $this->quotePayload();
+
+        try {
+            $processor->process(
+                new LiveRatesQuoteRequest($payload['origin'], $payload['destination'], $payload['package']),
+                new \ApiPlatform\Metadata\Post(),
+                $this->uriVariables(),
+            );
+            $this->fail('Expected HttpException was not thrown.');
+        } catch (HttpException $exception) {
+            $this->assertSame(502, $exception->getStatusCode());
+        }
+    }
+
+    public function testProcessMapsInvalidPayloadsToUnprocessableEntity(): void
+    {
+        [$orderRepository, , , $processor] = $this->processor();
+        $orderRepository->method('findOneBy')->willReturn($this->orderWithShipment(5, 'enviatodo_estafeta'));
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+        $processor->process(
+            new LiveRatesQuoteRequest([], [], []),
+            new \ApiPlatform\Metadata\Post(),
+            $this->uriVariables(),
+        );
     }
 }

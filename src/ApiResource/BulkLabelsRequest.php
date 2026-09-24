@@ -13,7 +13,7 @@ final class BulkLabelsRequest
     public function __construct(
         #[Groups(['enviatodo:admin:bulk_labels:write'])]
         #[Assert\Count(min: 1)]
-        #[Assert\All([new Assert\Type('integer')])]
+        #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
         public array $shipmentIds = [],
     ) {
     }

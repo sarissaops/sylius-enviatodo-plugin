@@ -21,6 +21,7 @@ final class LiveRatesQuoteRequest
         #[Assert\NotBlank]
         public array $package = [],
         #[Groups(['enviatodo:shop:live_rates:write'])]
+        #[Assert\Positive]
         public int $quantity = 1,
     ) {
     }

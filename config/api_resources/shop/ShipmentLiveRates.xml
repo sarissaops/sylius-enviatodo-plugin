@@ -14,10 +14,11 @@
                 input="SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesQuoteRequest"
                 output="SarissaOps\SyliusEnviatodoPlugin\ApiResource\LiveRatesResult"
                 processor="sarissaops_enviatodo.state_processor.shop.live_rates"
+                status="200"
             >
                 <uriVariables>
                     <uriVariable parameterName="tokenValue" fromClass="%sylius.model.order.class%" toProperty="order" />
-                    <uriVariable parameterName="shipmentId" fromClass="%sylius.model.shipment.class%" />
+                    <uriVariable parameterName="shipmentId" fromClass="%sylius.model.shipment.class%" fromProperty="order" />
                 </uriVariables>
                 <denormalizationContext>
                     <values>
@@ -37,11 +38,28 @@
                         </value>
                     </values>
                 </normalizationContext>
+                <validationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>Default</value>
+                            </values>
+                        </value>
+                    </values>
+                </validationContext>
                 <extraProperties>
                     <values>
                         <value name="summary">Live Enviatodo rates for one checkout shipment. Returns the quote uuid alongside the rows; hold it for order creation.</value>
                     </values>
                 </extraProperties>
+                <openapi>
+                    <responses>
+                        <response statusCode="200" description="Live rates with quote uuid" />
+                        <response statusCode="404" description="Order or shipment not found" />
+                        <response statusCode="422" description="Shipment not quotable" />
+                        <response statusCode="502" description="Rate provider unavailable" />
+                    </responses>
+                </openapi>
             </operation>
         </operations>
     </resource>

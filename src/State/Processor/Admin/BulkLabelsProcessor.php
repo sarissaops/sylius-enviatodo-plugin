@@ -13,6 +13,7 @@ use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsRequest;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsResult;
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
  * Headless bulk label download. Mirrors the admin AJAX controller over the
@@ -48,7 +49,7 @@ final class BulkLabelsProcessor implements ProcessorInterface
             }
         }
         if ([] === $guideIds) {
-            return new BulkLabelsResult([], []);
+            throw new UnprocessableEntityHttpException('No downloadable labels found for the given shipments.');
         }
 
         $batch = $this->labelService->downloadBinaries($guideIds);

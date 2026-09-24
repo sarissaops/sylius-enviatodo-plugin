@@ -1,5 +1,5 @@
-{% if hookable_metadata is defined and hookable_metadata.context.order is defined %}
-    {% set enviatodo_order = hookable_metadata.context.order %}
+{% if hookable_metadata is defined and (hookable_metadata.context.resource is defined or hookable_metadata.context.order is defined) %}
+    {% set enviatodo_order = hookable_metadata.context.resource ?? hookable_metadata.context.order %}
     <div class="enviatodo-tracking">
         {% for shipment in enviatodo_order.shipments %}
             {% set record = enviatodo_shipment_record(shipment) %}

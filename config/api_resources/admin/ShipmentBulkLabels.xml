@@ -34,11 +34,26 @@
                         </value>
                     </values>
                 </normalizationContext>
+                <validationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>Default</value>
+                            </values>
+                        </value>
+                    </values>
+                </validationContext>
                 <extraProperties>
                     <values>
                         <value name="summary">Download Enviatodo label binaries for several shipments. Per-file failures ride along in invalidFiles.</value>
                     </values>
                 </extraProperties>
+                <openapi>
+                    <responses>
+                        <response statusCode="200" description="Label binaries with per-file failures" />
+                        <response statusCode="422" description="No downloadable labels found" />
+                    </responses>
+                </openapi>
             </operation>
         </operations>
     </resource>

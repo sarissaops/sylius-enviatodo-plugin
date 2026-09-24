@@ -14,7 +14,7 @@ use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInter
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
 use SarissaOps\SyliusEnviatodoPlugin\State\Processor\Admin\BulkLabelsProcessor;
 use Sylius\Component\Shipping\Model\ShipmentInterface;
-
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 final class BulkLabelsProcessorTest extends TestCase
 {
     private function processor(EnviatodoShipmentRepositoryInterface $repository): BulkLabelsProcessor
@@ -52,12 +52,11 @@ final class BulkLabelsProcessorTest extends TestCase
         $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
         $repository->method('findById')->willReturn(null);
 
-        $result = $this->processor($repository)->process(
+        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->processor($repository)->process(
             new BulkLabelsRequest([9]),
             new \ApiPlatform\Metadata\Post(),
         );
-
-        $this->assertCount(0, $result->files);
     }
 
     public function testProcessRejectsNonRequestPayloads(): void
