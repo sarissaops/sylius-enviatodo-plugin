@@ -284,7 +284,7 @@ Static → phpunit → Behat. ECS and cs-fixer never coexist (decided: ECS).
   DTO groups/validation via PHP attributes on our own classes (XML reserved
   for third-party-class mappings), provider/processor unit tests
   (`api-test-case` deferred with Step 7 DB infra), `es`-primary translations,
-  UI wiring gated behind Twig presence. Exit: headless parity.
+  UI wiring gated behind Twig presence. Known-remaining: §14 P0/P1. Exit: headless parity.
 - **Step 7 — E2E ✓ (`3868055`).** Behat file set (skeleton shape): `behat.yml.dist`
   (`%env(BEHAT_BASE_URL)%` + `SuiteTagsExtension`, imports core `suites.yml` +
   `tests/Behat/Resources/suites.yml`); `suites.yml` (core `doctrine_orm` +
@@ -389,3 +389,26 @@ controllers (static Bearer needs only a validate/reconnect check on admin
 - L7 Env facts: MariaDB 11.8.8 (not MySQL 8.4); test DB is `sylius`, dev DB
   `sylius_dev`; MySQL `root` unreachable → reuse granted DBs; dev server moved
   `:8001` → `:8000`.
+- L8 Template context fallback: our tracking template reads
+  `hookable_metadata.context.order`, but all ~98 core admin order fragments read
+  `.resource` — `order` arrives only via metadata-name leakage. A themed/custom
+  order controller rendering with just `resource` silences our panel with no
+  log. Fix (open): `{% set enviatodo_order = hookable_metadata.context.resource
+  ?? hookable_metadata.context.order ?? null %}` + a test rendering with only
+  `resource` in context.
+- L9 Theme override path: `<theme>/templates/bundles/SarissaOpsSyliusEnviatodoPlugin/admin/order/tracking.html.twig`
+  (literal `Plugin`, no `Bundle` suffix — `NamespacedTemplateLocator.php:59-66`);
+  document it in README. Hook names are theme-stable; emission depends on the
+  theme keeping `{% hook %}` tags (inherent to the hooks design, not our bug).
+
+## 14. Known-remaining API gaps (headless audit, unverified code — fix next)
+
+- P0 scope the shop lookup: `ShipmentLiveRates.xml` `shipmentId` lacks
+  `fromProperty="order"`; `LiveRatesProcessor` uses bare `findOneBy(token)` —
+  cross-order/cross-channel replay works today. Fix: scoped cart-only query +
+  channel + state checks (cf. core `Order.xml:210-213`, `ItemProvider.php:39-60`).
+- P0 error mapping: SDK/`InvalidArgument` failures bubble as 500 HTML, not
+  ApiProblem JSON; bulk silent-empty-200 on unknown ids. Fix: 502/422 mapping
+  mirroring `QuoteController`, `<openapi><responses>` per op.
+- P1 explicit `<validationContext>`, `Positive`/`Collection` DTO tightening,
+  `status="200"` on the shop op (implicit 201 today), nested-schema render test.
