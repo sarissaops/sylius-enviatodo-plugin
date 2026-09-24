@@ -136,12 +136,14 @@
             <argument type="service" id="sylius.context.channel" />
             <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <tag name="api_platform.state_processor" />
         </service>
 
         <service id="sarissaops_enviatodo.state_processor.admin.bulk_labels" class="SarissaOps\SyliusEnviatodoPlugin\State\Processor\Admin\BulkLabelsProcessor">
             <argument type="service" id="sarissaops_enviatodo.label_service" />
             <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
             <argument type="service" id="logger" />
+            <tag name="api_platform.state_processor" />
         </service>
 
         <service id="sarissaops_enviatodo.guide_api" class="SarissaOps\Enviatodo\Api\GuideApi">

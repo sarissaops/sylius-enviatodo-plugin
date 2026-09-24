@@ -116,6 +116,18 @@ final class ContainerWiringTest extends TestCase
         }
     }
 
+    public function testStateProcessorsAreTagged(): void
+    {
+        $container = $this->build();
+
+        foreach ([
+            'sarissaops_enviatodo.state_processor.shop.live_rates',
+            'sarissaops_enviatodo.state_processor.admin.bulk_labels',
+        ] as $id) {
+            $this->assertCount(1, $container->getDefinition($id)->getTag('api_platform.state_processor'), $id);
+        }
+    }
+
     public function testExtensionExposesParametersAndValidationGroup(): void
     {
         $container = $this->build();

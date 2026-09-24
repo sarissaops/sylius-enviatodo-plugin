@@ -13,11 +13,17 @@
 
         <env name="APP_SECRET" value="''" />
         <env name="APP_ENV" value="test"/>
+        <env name="PANTHER_APP_ENV" value="test"/>
+        <env name="PANTHER_WEB_SERVER_DIR" value="vendor/sylius/test-application/public"/>
+        <env name="PANTHER_NO_SANDBOX" value="1"/>
+        <env name="PANTHER_EXTERNAL_BASE_URI" value="http://127.0.0.1:8080"/>
     </php>
 
     <testsuites>
         <testsuite name="all">
-            <directory>tests</directory>
+            <directory>tests/Unit</directory>
+            <directory>tests/Functional</directory>
+            <directory>tests/Integration</directory>
         </testsuite>
 
         <testsuite name="unit">
@@ -35,6 +41,10 @@
         <testsuite name="non-unit">
             <directory>tests/Functional</directory>
             <directory>tests/Integration</directory>
+        </testsuite>
+
+        <testsuite name="e2e">
+            <directory>tests/E2E</directory>
         </testsuite>
     </testsuites>
 </phpunit>
