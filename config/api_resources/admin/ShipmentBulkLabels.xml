@@ -50,8 +50,8 @@
                 </extraProperties>
                 <openapi>
                     <responses>
-                        <response statusCode="200" description="Label binaries with per-file failures" />
-                        <response statusCode="422" description="No downloadable labels found" />
+                        <response status="200" description="Label binaries with per-file failures" />
+                        <response status="422" description="No downloadable labels found" />
                     </responses>
                 </openapi>
             </operation>

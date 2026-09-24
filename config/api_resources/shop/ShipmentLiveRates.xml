@@ -54,10 +54,10 @@
                 </extraProperties>
                 <openapi>
                     <responses>
-                        <response statusCode="200" description="Live rates with quote uuid" />
-                        <response statusCode="404" description="Order or shipment not found" />
-                        <response statusCode="422" description="Shipment not quotable" />
-                        <response statusCode="502" description="Rate provider unavailable" />
+                        <response status="200" description="Live rates with quote uuid" />
+                        <response status="404" description="Order or shipment not found" />
+                        <response status="422" description="Shipment not quotable" />
+                        <response status="502" description="Rate provider unavailable" />
                     </responses>
                 </openapi>
             </operation>
