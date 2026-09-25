@@ -11,8 +11,25 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Component\Shipping;
  */
 final class QuotePayload
 {
+    /** @var list<string> int_number is optional (empty accepted by the API). */
+    public const REQUIRED_ORIGIN_KEYS = [
+        'address_type_id',
+        'full_name',
+        'email',
+        'telephone',
+        'street',
+        'ext_number',
+        'zip_code',
+        'suburb',
+        'municipality',
+        'town',
+        'state',
+        'state_code',
+        'country_code',
+    ];
+
     /** @var list<string> */
-    private const REQUIRED_PACKAGE_KEYS = [
+    public const REQUIRED_PACKAGE_KEYS = [
         'product_type',
         'unit_type',
         'package_content',
@@ -84,5 +101,28 @@ final class QuotePayload
         }
 
         return $normalized;
+    }
+
+    /**
+     * Names the required keys absent from the given block, so misconfigured
+     * method payloads fail with the missing field names instead of an
+     * opaque API rejection.
+     *
+     * @param array<mixed> $block
+     * @param list<string> $required
+     *
+     * @return list<string>
+     */
+    public static function missingKeys(array $block, array $required): array
+    {
+        $missing = [];
+        foreach ($required as $key) {
+            $value = $block[$key] ?? null;
+            if (!\is_scalar($value) || '' === trim((string) $value)) {
+                $missing[] = $key;
+            }
+        }
+
+        return $missing;
     }
 }

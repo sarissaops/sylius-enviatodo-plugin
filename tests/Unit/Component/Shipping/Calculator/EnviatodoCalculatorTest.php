@@ -132,6 +132,27 @@ final class EnviatodoCalculatorTest extends TestCase
         $this->assertNull($calculator->rateFor($this->quotePayload(), '5', '6'));
     }
 
+    /** @return array<string, mixed> */
+    private function fullOrigin(): array
+    {
+        return [
+            'address_type_id' => '1', 'full_name' => 'Tienda', 'email' => 't@example.com',
+            'telephone' => '8180808080', 'street' => 'Street 1', 'ext_number' => '1', 'int_number' => '',
+            'zip_code' => '64000', 'suburb' => 'Centro', 'municipality' => 'Monterrey', 'town' => 'Monterrey',
+            'state' => 'Nuevo Leon', 'state_code' => 'NL', 'country_code' => 'MX',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function fullPackage(): array
+    {
+        return [
+            'product_type' => '01010101', 'unit_type' => 'X1A', 'package_content' => 'books',
+            'amount_pkg' => '200', 'height' => 10, 'width' => 10, 'length' => 10, 'weight' => 1,
+            'real_weight' => '1.00', 'volumetric_weight' => '1', 'bill_weight' => '1', 'default_pkg' => '0',
+        ];
+    }
+
     public function testRateForAddressResolvesSettlementAndMatchesService(): void
     {
         $quoteApi = $this->createMock(QuoteApi::class);
@@ -155,7 +176,7 @@ final class EnviatodoCalculatorTest extends TestCase
         ]));
 
         $rate = (new EnviatodoCalculator($quoteApi, $zipCodeApi))->rateForAddress(
-            ['origin' => ['zip_code' => '64000'], 'package' => ['bill_weight' => '1']],
+            ['origin' => $this->fullOrigin(), 'package' => $this->fullPackage()],
             ['fullName' => 'John Doe', 'email' => 'john@example.com', 'telephone' => '5555555555', 'street' => 'Paseo Violetas 10', 'postcode' => '06600', 'countryCode' => 'mx'],
             '9',
             '11',
@@ -173,7 +194,7 @@ final class EnviatodoCalculatorTest extends TestCase
         $zipCodeApi->method('show')->willReturn(ZipCode::create(['component' => 'zip', 'type' => 'list', 'items' => []]));
 
         $rate = (new EnviatodoCalculator($quoteApi, $zipCodeApi))->rateForAddress(
-            ['origin' => ['zip_code' => '64000'], 'package' => ['bill_weight' => '1']],
+            ['origin' => $this->fullOrigin(), 'package' => $this->fullPackage()],
             ['fullName' => 'John Doe', 'email' => 'john@example.com', 'telephone' => '5555555555', 'street' => 'Paseo Violetas 10', 'postcode' => '00000', 'countryCode' => 'MX'],
             '9',
             '11',

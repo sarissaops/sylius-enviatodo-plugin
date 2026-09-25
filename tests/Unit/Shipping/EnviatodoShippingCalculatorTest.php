@@ -96,8 +96,17 @@ final class EnviatodoShippingCalculatorTest extends TestCase
         return ['quote' => [
             'shipping_type' => '1',
             'quantity' => 1,
-            'origin' => ['zip_code' => '64000'],
-            'package' => ['bill_weight' => '1'],
+            'origin' => [
+                'address_type_id' => '1', 'full_name' => 'Tienda', 'email' => 't@example.com',
+                'telephone' => '8180808080', 'street' => 'Street 1', 'ext_number' => '1', 'int_number' => '',
+                'zip_code' => '64000', 'suburb' => 'Centro', 'municipality' => 'Monterrey', 'town' => 'Monterrey',
+                'state' => 'Nuevo Leon', 'state_code' => 'NL', 'country_code' => 'MX',
+            ],
+            'package' => [
+                'product_type' => '01010101', 'unit_type' => 'X1A', 'package_content' => 'books',
+                'amount_pkg' => '200', 'height' => 10, 'width' => 10, 'length' => 10, 'weight' => 1,
+                'real_weight' => '1.00', 'volumetric_weight' => '1', 'bill_weight' => '1', 'default_pkg' => '0',
+            ],
         ]];
     }
 

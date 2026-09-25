@@ -55,4 +55,21 @@ final class QuotePayloadTest extends TestCase
 
         QuotePayload::create([], ['zip_code' => '06600'], $this->package());
     }
+
+    public function testMissingKeysNamesAbsentOriginFields(): void
+    {
+        $this->assertSame(['email', 'telephone'], QuotePayload::missingKeys(
+            ['full_name' => 'X'],
+            ['full_name', 'email', 'telephone'],
+        ));
+        $this->assertSame([], QuotePayload::missingKeys(['a' => 1], ['a']));
+    }
+
+    public function testRequiredKeySetsMatchTheApiContract(): void
+    {
+        $this->assertCount(13, QuotePayload::REQUIRED_ORIGIN_KEYS);
+        $this->assertCount(12, QuotePayload::REQUIRED_PACKAGE_KEYS);
+        $this->assertContains('state_code', QuotePayload::REQUIRED_ORIGIN_KEYS);
+        $this->assertContains('bill_weight', QuotePayload::REQUIRED_PACKAGE_KEYS);
+    }
 }

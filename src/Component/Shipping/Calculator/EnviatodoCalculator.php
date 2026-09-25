@@ -10,6 +10,7 @@ use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\Enviatodo\Model\ZipCode\ZipCode;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\DestinationAddress;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotedRates;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\RateResult;
 
 /**
@@ -64,12 +65,18 @@ final class EnviatodoCalculator
     public function rateForAddress(array $quoteConfig, array $contact, string $providerId, string $serviceId): ?RateResult
     {
         $origin = $quoteConfig['origin'] ?? null;
-        if (!\is_array($origin) || [] === $origin) {
-            throw new \InvalidArgumentException('Enviatodo method configuration requires a full "origin" address.');
-        }
         $package = $quoteConfig['package'] ?? null;
-        if (!\is_array($package) || [] === $package) {
-            throw new \InvalidArgumentException('Enviatodo method configuration requires a "package" definition.');
+        if (!\is_array($origin) || !\is_array($package)) {
+            throw new \InvalidArgumentException('Enviatodo method configuration requires an "origin" address and a "package" definition.');
+        }
+        $missingOrigin = QuotePayload::missingKeys($origin, QuotePayload::REQUIRED_ORIGIN_KEYS);
+        $missingPackage = QuotePayload::missingKeys($package, QuotePayload::REQUIRED_PACKAGE_KEYS);
+        if ([] !== $missingOrigin || [] !== $missingPackage) {
+            throw new \InvalidArgumentException(sprintf(
+                'Enviatodo method configuration is missing keys: origin[%s] package[%s].',
+                implode(',', $missingOrigin),
+                implode(',', $missingPackage),
+            ));
         }
 
         $postcode = trim($contact['postcode']);
