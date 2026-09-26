@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
+use SarissaOps\Enviatodo\Exception\EnviatodoException;
+use SarissaOps\Enviatodo\Exception\HttpClientException;
+use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\Enviatodo\Model\Package\Package;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\CsrfProtection;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPackageCatalog;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class PackageController
@@ -19,14 +23,24 @@ final class PackageController
     public function __construct(
         private readonly EnviatodoPackageCatalog $packageCatalog,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
     ) {
     }
 
     public function listAction(): JsonResponse
     {
-        $packages = [];
-        foreach ($this->packageCatalog->all() as $package) {
-            $packages[] = $this->map($package);
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
+        try {
+            $packages = [];
+            foreach ($this->packageCatalog->all() as $package) {
+                $packages[] = $this->map($package);
+            }
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'package_unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 
         return new JsonResponse(['packages' => $packages]);
@@ -34,7 +48,16 @@ final class PackageController
 
     public function showAction(Request $request, int $id): JsonResponse
     {
-        $package = $this->packageCatalog->get($id);
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
+        try {
+            $package = $this->packageCatalog->get($id);
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'package_unavailable'], Response::HTTP_BAD_GATEWAY);
+        }
         if (null === $package) {
             return new JsonResponse(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
         }
@@ -44,6 +67,11 @@ final class PackageController
 
     public function saveAction(Request $request): JsonResponse
     {
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
         $guard = CsrfProtection::validate($request, $this->csrfTokenManager, self::CSRF_TOKEN_ID);
         if (null !== $guard) {
             return $guard;
@@ -64,7 +92,7 @@ final class PackageController
             $package = $this->packageCatalog->save($payload);
         } catch (\InvalidArgumentException) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
-        } catch (\RuntimeException) {
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
             return new JsonResponse(['error' => 'package_unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 
@@ -73,12 +101,21 @@ final class PackageController
 
     public function deleteAction(Request $request, int $id): JsonResponse
     {
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
         $guard = CsrfProtection::validate($request, $this->csrfTokenManager, self::CSRF_TOKEN_ID);
         if (null !== $guard) {
             return $guard;
         }
 
-        $this->packageCatalog->remove($id);
+        try {
+            $this->packageCatalog->remove($id);
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'package_unavailable'], Response::HTTP_BAD_GATEWAY);
+        }
 
         return new JsonResponse(['deleted' => true]);
     }

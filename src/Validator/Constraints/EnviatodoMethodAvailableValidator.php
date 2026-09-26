@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace SarissaOps\SyliusEnviatodoPlugin\Validator\Constraints;
 
 use SarissaOps\Enviatodo\Api\ZipCodeApi;
-use SarissaOps\Enviatodo\Exception\EnviatodoException;
-use SarissaOps\Enviatodo\Exception\HttpClientException;
-use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\Enviatodo\Model\ZipCode\ZipCode;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
 use Sylius\Component\Core\Model\OrderInterface;
@@ -47,7 +44,7 @@ final class EnviatodoMethodAvailableValidator extends ConstraintValidator
 
             try {
                 $zip = $this->zipCodeApi->show($postcode);
-            } catch (EnviatodoException | HttpClientException | HttpServerException) {
+            } catch (\Exception) {
                 $this->context->buildViolation($constraint->message)->addViolation();
 
                 continue;

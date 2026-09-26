@@ -7,12 +7,16 @@ namespace SarissaOps\SyliusEnviatodoPlugin\State\Processor\Admin;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use Psr\Log\LoggerInterface;
+use SarissaOps\Enviatodo\Exception\EnviatodoException;
+use SarissaOps\Enviatodo\Exception\HttpClientException;
+use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkInvalidFile;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelFile;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsRequest;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\BulkLabelsResult;
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
@@ -42,17 +46,29 @@ final class BulkLabelsProcessor implements ProcessorInterface
         }
 
         $guideIds = [];
-        foreach ($data->shipmentIds as $shipmentId) {
-            $guideId = $this->repository->findById($shipmentId)?->getGuideId();
+        $skipped = 0;
+        foreach (array_unique($data->shipmentIds) as $shipmentId) {
+            $guideId = $this->repository->findOneByShipmentId($shipmentId)?->getGuideId();
             if (null !== $guideId && is_numeric($guideId)) {
                 $guideIds[] = (int) $guideId;
+            } else {
+                ++$skipped;
             }
         }
         if ([] === $guideIds) {
             throw new UnprocessableEntityHttpException('No downloadable labels found for the given shipments.');
         }
+        if (0 < $skipped) {
+            $this->logger->info('Enviatodo bulk labels skipped shipments without guides.', ['skipped' => $skipped]);
+        }
 
-        $batch = $this->labelService->downloadBinaries($guideIds);
+        try {
+            $batch = $this->labelService->downloadBinaries($guideIds);
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException $exception) {
+            $this->logger->error('Enviatodo bulk label download failed.', ['error' => $exception->getMessage(), 'guides' => \count($guideIds)]);
+
+            throw new HttpException(502, 'Label provider unavailable.', $exception);
+        }
 
         $files = [];
         foreach ($batch->getFiles() as $file) {

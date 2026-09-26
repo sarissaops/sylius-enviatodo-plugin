@@ -13,6 +13,7 @@ use SarissaOps\Enviatodo\Model\Parcel\ParcelService;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\CarrierController;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoCarrierCatalog;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 final class CarrierControllerTest extends TestCase
 {
@@ -34,7 +35,10 @@ final class CarrierControllerTest extends TestCase
             'component' => 'c', 'type' => 'pkt', 'items' => [['key' => '1', 'value' => 'Box']],
         ]));
 
-        $response = (new CarrierController(new EnviatodoCarrierCatalog($parcelApi, $catalogApi)))
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+
+        $response = (new CarrierController(new EnviatodoCarrierCatalog($parcelApi, $catalogApi), $authorizationChecker))
             ->listAction(Request::create('/admin/enviatodo/carriers', 'GET'));
 
         $this->assertSame(200, $response->getStatusCode());

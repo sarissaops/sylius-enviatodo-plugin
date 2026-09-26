@@ -12,6 +12,7 @@ use SarissaOps\Enviatodo\Model\Address\SavedAddress;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\AddressController;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoAddressBook;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class AddressControllerTest extends TestCase
@@ -22,12 +23,14 @@ final class AddressControllerTest extends TestCase
         return ['id' => '12', 'address_type_id' => '1', 'full_name' => 'HQ', 'company' => 'Acme', 'zip_code' => '64000'];
     }
 
-    private function controller(AddressApi $addressApi, bool $csrfValid): AddressController
+    private function controller(AddressApi $addressApi, bool $csrfValid, bool $admin = true): AddressController
     {
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn($admin);
 
-        return new AddressController(new EnviatodoAddressBook($addressApi, new NullLogger()), $csrf);
+        return new AddressController(new EnviatodoAddressBook($addressApi, new NullLogger()), $csrf, $authorizationChecker);
     }
 
     private function addressApi(): AddressApi
@@ -84,5 +87,12 @@ final class AddressControllerTest extends TestCase
         $request = Request::create('/admin/enviatodo/addresses', 'POST', [], [], [], [], (string) json_encode($this->addressData()));
 
         $this->assertSame(403, $controller->saveAction($request)->getStatusCode());
+    }
+
+    public function testActionsForbidNonAdministrators(): void
+    {
+        $controller = $this->controller($this->addressApi(), true, false);
+
+        $this->assertSame(403, $controller->listAction(Request::create('/admin/enviatodo/addresses', 'GET'))->getStatusCode());
     }
 }

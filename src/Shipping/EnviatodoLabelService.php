@@ -7,6 +7,7 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Shipping;
 use SarissaOps\Enviatodo\Api\GuideApi;
 use SarissaOps\Enviatodo\Model\Guide\GuideBinaries;
 use SarissaOps\Enviatodo\Model\Guide\GuideFile;
+use SarissaOps\Enviatodo\Model\Guide\InvalidFile;
 
 /**
  * Label file retrieval. Binaries download in chunks of 10 (API batch limit)
@@ -46,7 +47,15 @@ final class EnviatodoLabelService
             if (!$result instanceof GuideBinaries) {
                 throw new \RuntimeException('GuideApi must hydrate GuideBinaries models for bulk download.');
             }
-            array_push($files, ...$result->getFiles());
+            foreach ($result->getFiles() as $file) {
+                // A 0-byte "success" would present as a valid PDF downstream.
+                if ('' === $file->getBinary()) {
+                    $invalidFiles[] = InvalidFile::create(['guide_id' => $file->getGuideId(), 'reason' => 'empty_binary']);
+
+                    continue;
+                }
+                $files[] = $file;
+            }
             array_push($invalidFiles, ...$result->getInvalidFiles());
         }
 

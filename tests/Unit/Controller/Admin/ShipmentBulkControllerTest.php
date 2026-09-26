@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\Controller\Admin;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use SarissaOps\Enviatodo\Api\GuideApi;
 use SarissaOps\Enviatodo\Model\Guide\GuideBinaries;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\ShipmentBulkController;
@@ -13,6 +14,7 @@ use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInter
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoLabelService;
 use Sylius\Component\Shipping\Model\ShipmentInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class ShipmentBulkControllerTest extends TestCase
@@ -37,15 +39,17 @@ final class ShipmentBulkControllerTest extends TestCase
         ]));
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
 
-        return [$repository, new ShipmentBulkController(new EnviatodoLabelService($guideApi), $repository, $csrf)];
+        return [$repository, new ShipmentBulkController(new EnviatodoLabelService($guideApi), $repository, $csrf, new NullLogger(), $authorizationChecker)];
     }
 
     public function testBulkLabelsSkipsShipmentsWithoutGuideIds(): void
     {
         [$repository, $controller] = $this->controller(true);
         $record = $this->record('7');
-        $repository->method('findById')->willReturnCallback(
+        $repository->method('findOneByShipmentId')->willReturnCallback(
             static fn (int $id): ?EnviatodoShipment => 1 === $id ? $record : null,
         );
 

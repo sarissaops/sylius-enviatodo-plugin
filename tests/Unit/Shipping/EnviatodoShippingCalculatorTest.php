@@ -180,26 +180,26 @@ final class EnviatodoShippingCalculatorTest extends TestCase
         $this->calculator($quoteApi, $zipCodeApi)->calculate($this->shipment('enviatodo_estafeta'), $this->configuration());
     }
 
-    public function testCalculateRejectsMethodsOutsideTheMap(): void
+    public function testCalculateHidesMethodsOutsideTheMap(): void
     {
         $calculator = new EnviatodoShippingCalculator(
             new EnviatodoCalculator($this->createMock(QuoteApi::class), $this->createMock(ZipCodeApi::class)),
             new ProviderMap([]),
         );
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(NoRateAvailableException::class);
 
         $calculator->calculate($this->shipment('flat_rate'), $this->configuration());
     }
 
-    public function testCalculateRejectsMissingQuoteConfiguration(): void
+    public function testCalculateHidesMissingQuoteConfiguration(): void
     {
         $calculator = new EnviatodoShippingCalculator(
             new EnviatodoCalculator($this->createMock(QuoteApi::class), $this->createMock(ZipCodeApi::class)),
             new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
         );
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(NoRateAvailableException::class);
 
         $calculator->calculate($this->shipment('enviatodo_estafeta'), []);
     }

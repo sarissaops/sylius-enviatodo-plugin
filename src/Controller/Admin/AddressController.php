@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
+use SarissaOps\Enviatodo\Exception\EnviatodoException;
+use SarissaOps\Enviatodo\Exception\HttpClientException;
+use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\Enviatodo\Model\Address\Address;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\CsrfProtection;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoAddressBook;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class AddressController
@@ -19,14 +23,24 @@ final class AddressController
     public function __construct(
         private readonly EnviatodoAddressBook $addressBook,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
     ) {
     }
 
     public function listAction(): JsonResponse
     {
-        $addresses = [];
-        foreach ($this->addressBook->all() as $address) {
-            $addresses[] = $this->map($address);
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
+        try {
+            $addresses = [];
+            foreach ($this->addressBook->all() as $address) {
+                $addresses[] = $this->map($address);
+            }
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'address_unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 
         return new JsonResponse(['addresses' => $addresses]);
@@ -34,7 +48,16 @@ final class AddressController
 
     public function showAction(Request $request, int $id): JsonResponse
     {
-        $address = $this->addressBook->get($id);
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
+        try {
+            $address = $this->addressBook->get($id);
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'address_unavailable'], Response::HTTP_BAD_GATEWAY);
+        }
         if (null === $address) {
             return new JsonResponse(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
         }
@@ -44,6 +67,11 @@ final class AddressController
 
     public function saveAction(Request $request): JsonResponse
     {
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
         $guard = CsrfProtection::validate($request, $this->csrfTokenManager, self::CSRF_TOKEN_ID);
         if (null !== $guard) {
             return $guard;
@@ -64,7 +92,7 @@ final class AddressController
             $address = $this->addressBook->save($payload);
         } catch (\InvalidArgumentException) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
-        } catch (\RuntimeException) {
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
             return new JsonResponse(['error' => 'address_unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 
@@ -73,12 +101,21 @@ final class AddressController
 
     public function deleteAction(Request $request, int $id): JsonResponse
     {
+        $denied = AdminAccess::denyUnlessAdmin($this->authorizationChecker);
+        if (null !== $denied) {
+            return $denied;
+        }
+
         $guard = CsrfProtection::validate($request, $this->csrfTokenManager, self::CSRF_TOKEN_ID);
         if (null !== $guard) {
             return $guard;
         }
 
-        $this->addressBook->remove($id);
+        try {
+            $this->addressBook->remove($id);
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
+            return new JsonResponse(['error' => 'address_unavailable'], Response::HTTP_BAD_GATEWAY);
+        }
 
         return new JsonResponse(['deleted' => true]);
     }

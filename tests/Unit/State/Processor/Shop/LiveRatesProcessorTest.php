@@ -6,6 +6,7 @@ namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\State\Processor\Shop;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use SarissaOps\Enviatodo\Api\QuoteApi;
 use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Exception\EnviatodoException;
@@ -68,6 +69,7 @@ final class LiveRatesProcessorTest extends TestCase
             $channelContext,
             $calculator,
             new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
+            new NullLogger(),
         );
 
         return [$orderRepository, $channelContext, $calculator, $processor];
@@ -80,6 +82,7 @@ final class LiveRatesProcessorTest extends TestCase
         $channel = $this->createMock(ChannelInterface::class);
         $channel->method('getCode')->willReturn($channelCode);
         $order = $this->createMock(OrderInterface::class);
+        $order->method('getId')->willReturn($shipmentId * 1000);
         $order->method('getChannel')->willReturn($channel);
         $order->method('getCheckoutState')->willReturn($checkoutState);
         $shipment = $this->createMock(ShipmentInterface::class);
@@ -232,6 +235,7 @@ final class LiveRatesProcessorTest extends TestCase
             $channelContext,
             new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)),
             new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
+            new NullLogger(),
         );
 
         $payload = $this->quotePayload();

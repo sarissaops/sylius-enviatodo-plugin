@@ -6,6 +6,7 @@ namespace SarissaOps\SyliusEnviatodoPlugin\State\Processor\Shop;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use Psr\Log\LoggerInterface;
 use SarissaOps\Enviatodo\Exception\EnviatodoException;
 use SarissaOps\Enviatodo\Exception\HttpClientException;
 use SarissaOps\Enviatodo\Exception\HttpServerException;
@@ -39,6 +40,7 @@ final class LiveRatesProcessor implements ProcessorInterface
         private readonly ChannelContextInterface $channelContext,
         private readonly EnviatodoCalculator $calculator,
         private readonly ProviderMap $providerMap,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -51,6 +53,10 @@ final class LiveRatesProcessor implements ProcessorInterface
         if (!$data instanceof LiveRatesQuoteRequest) {
             throw new \InvalidArgumentException('Live rates require a LiveRatesQuoteRequest payload.');
         }
+        $this->logger->debug('Enviatodo live rates request.', [
+            'token_variable' => get_debug_type($uriVariables['tokenValue'] ?? null),
+            'shipment_variable' => get_debug_type($uriVariables['shipmentId'] ?? null),
+        ]);
 
         $order = $uriVariables['tokenValue'] ?? null;
         if (\is_string($order)) {
@@ -69,8 +75,8 @@ final class LiveRatesProcessor implements ProcessorInterface
         $shipment = $uriVariables['shipmentId'] ?? null;
         if (!\is_object($shipment)) {
             $shipment = null;
-            $wantedId = $uriVariables['shipmentId'] ?? null;
-            $wantedId = \is_scalar($wantedId) ? (int) $wantedId : 0;
+            $rawId = $uriVariables['shipmentId'] ?? null;
+            $wantedId = \is_int($rawId) ? $rawId : (\is_string($rawId) && ctype_digit($rawId) ? (int) $rawId : 0);
             foreach ($order->getShipments() as $candidate) {
                 if ($candidate->getId() === $wantedId) {
                     $shipment = $candidate;
@@ -79,7 +85,7 @@ final class LiveRatesProcessor implements ProcessorInterface
                 }
             }
         }
-        if (!$shipment instanceof ShipmentInterface || $shipment->getOrder() !== $order) {
+        if (!$shipment instanceof ShipmentInterface || $shipment->getOrder() === null || $shipment->getOrder()->getId() !== $order->getId()) {
             throw new NotFoundHttpException('Shipment not found.');
         }
 
@@ -100,7 +106,21 @@ final class LiveRatesProcessor implements ProcessorInterface
             );
         } catch (\InvalidArgumentException $exception) {
             throw new UnprocessableEntityHttpException('Quote payload is invalid.', $exception);
-        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException $exception) {
+        } catch (HttpClientException $exception) {
+            // Deterministic rejections never succeed on retry: bad input,
+            // exhausted balance, and rate limiting are client-side 422s.
+            if (\in_array($exception->getResponseCode(), [400, 402, 429], true)) {
+                throw new UnprocessableEntityHttpException('Quote rejected by the rate provider.', $exception);
+            }
+
+            throw new HttpException(502, 'Rate provider unavailable.', $exception);
+        } catch (EnviatodoException | HttpServerException | \RuntimeException $exception) {
+            $this->logger->error('Enviatodo live rates unavailable.', [
+                'channel' => $order->getChannel()?->getCode(),
+                'shipment' => $shipment->getId(),
+                'error' => $exception->getMessage(),
+            ]);
+
             throw new HttpException(502, 'Rate provider unavailable.', $exception);
         }
 

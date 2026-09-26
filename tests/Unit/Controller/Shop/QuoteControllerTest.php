@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\SarissaOps\SyliusEnviatodoPlugin\Unit\Controller\Shop;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 use SarissaOps\Enviatodo\Api\QuoteApi;
 use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Shop\QuoteController;
+use Sylius\Component\Channel\Context\ChannelContextInterface;
+use Sylius\Component\Channel\Model\ChannelInterface;
+use Sylius\Component\Core\Model\OrderInterface;
+use Sylius\Component\Core\Repository\OrderRepositoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
@@ -19,31 +24,46 @@ final class QuoteControllerTest extends TestCase
     private function body(): array
     {
         return [
+            'cart_token' => 'cart-token',
             'origin' => ['zip_code' => '64000'],
             'destination' => ['zip_code' => '06600'],
             'package' => [
-                'product_type' => '01010101',
-                'unit_type' => 'X1A',
-                'package_content' => 'books',
-                'amount_pkg' => '200',
-                'height' => 10,
-                'width' => 10,
-                'length' => 10,
-                'weight' => 1,
-                'real_weight' => '1.00',
-                'volumetric_weight' => '1',
-                'bill_weight' => '1',
-                'default_pkg' => '0',
+                'product_type' => '01010101', 'unit_type' => 'X1A', 'package_content' => 'books',
+                'amount_pkg' => '200', 'height' => 10, 'width' => 10, 'length' => 10, 'weight' => 1,
+                'real_weight' => '1.00', 'volumetric_weight' => '1', 'bill_weight' => '1', 'default_pkg' => '0',
             ],
         ];
     }
 
-    private function controller(QuoteApi $quoteApi, bool $csrfValid): QuoteController
+    private function controller(QuoteApi $quoteApi, bool $csrfValid, ?OrderInterface $order = null): QuoteController
     {
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
+        $orderRepository = $this->createMock(OrderRepositoryInterface::class);
+        $orderRepository->method('findOneBy')->with(['tokenValue' => 'cart-token'])->willReturn($order ?? $this->cart());
+        $channel = $this->createMock(ChannelInterface::class);
+        $channel->method('getCode')->willReturn('WEB');
+        $channelContext = $this->createMock(ChannelContextInterface::class);
+        $channelContext->method('getChannel')->willReturn($channel);
 
-        return new QuoteController(new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)), $csrf);
+        return new QuoteController(
+            new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)),
+            $csrf,
+            $orderRepository,
+            $channelContext,
+        );
+    }
+
+    private function cart(string $channelCode = 'WEB', string $checkoutState = 'cart'): OrderInterface
+    {
+        $channel = $this->createMock(ChannelInterface::class);
+        $channel->method('getCode')->willReturn($channelCode);
+        $order = $this->createMock(OrderInterface::class);
+        $order->method('getChannel')->willReturn($channel);
+        $order->method('getCheckoutState')->willReturn($checkoutState);
+        $order->method('getShipments')->willReturn(new ArrayCollection([]));
+
+        return $order;
     }
 
     private function quoteApi(): QuoteApi
@@ -100,5 +120,43 @@ final class QuoteControllerTest extends TestCase
 
         $this->assertSame(400, $this->controller($this->quoteApi(), true)->quoteAction($badJson)->getStatusCode());
         $this->assertSame(400, $this->controller($this->quoteApi(), true)->quoteAction($missingKeys)->getStatusCode());
+    }
+
+    public function testQuoteActionRejectsMissingCartTokens(): void
+    {
+        $body = $this->body();
+        unset($body['cart_token']);
+        $request = Request::create('/enviatodo/ajax/quote', 'POST', [], [], [], [], (string) json_encode($body));
+
+        $this->assertSame(400, $this->controller($this->quoteApi(), true)->quoteAction($request)->getStatusCode());
+    }
+
+    public function testQuoteActionRejectsUnknownCarts(): void
+    {
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->expects($this->never())->method('all');
+        $csrf = $this->createMock(CsrfTokenManagerInterface::class);
+        $csrf->method('isTokenValid')->willReturn(true);
+        $orderRepository = $this->createMock(OrderRepositoryInterface::class);
+        $orderRepository->method('findOneBy')->willReturn(null);
+        $channelContext = $this->createMock(ChannelContextInterface::class);
+        $controller = new QuoteController(
+            new EnviatodoCalculator($quoteApi, $this->createMock(ZipCodeApi::class)),
+            $csrf,
+            $orderRepository,
+            $channelContext,
+        );
+        $request = Request::create('/enviatodo/ajax/quote', 'POST', [], [], [], [], (string) json_encode($this->body()));
+
+        $this->assertSame(404, $controller->quoteAction($request)->getStatusCode());
+    }
+
+    public function testQuoteActionRejectsForeignCarts(): void
+    {
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->expects($this->never())->method('all');
+        $request = Request::create('/enviatodo/ajax/quote', 'POST', [], [], [], [], (string) json_encode($this->body()));
+
+        $this->assertSame(404, $this->controller($quoteApi, true, $this->cart('OTHER'))->quoteAction($request)->getStatusCode());
     }
 }

@@ -22,8 +22,12 @@ final class EnviatodoAdminExtension extends AbstractExtension
         return [new TwigFunction('enviatodo_shipment_record', [$this, 'getShipmentRecord'])];
     }
 
-    public function getShipmentRecord(ShipmentInterface $shipment): ?EnviatodoShipment
+    public function getShipmentRecord(mixed $shipment): ?EnviatodoShipment
     {
+        if (!$shipment instanceof ShipmentInterface) {
+            return null;
+        }
+
         return $this->repository->findOneByShipment($shipment);
     }
 }

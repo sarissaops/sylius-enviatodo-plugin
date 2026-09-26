@@ -6,24 +6,22 @@ namespace SarissaOps\SyliusEnviatodoPlugin\EventListener;
 
 use Psr\Log\LoggerInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
-use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManagerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Symfony\Component\Workflow\Event\CompletedEvent;
 
 /**
- * Completes draft label rows when order payment transitions to paid (event
+ * Buys Enviatodo labels when order payment transitions to paid (event
  * workflow.sylius_order_payment.completed.pay, the same seam core inventory
- * and state resolution use). Shipments without a draft row are skipped — the
- * uuid is stored at checkout (Step 3). Failures are logged, never thrown: the
- * order is already paid, so purchase retries happen from the admin (Step 3).
+ * and state resolution use). The quote is taken fresh at payment time, so no
+ * checkout-held uuid can go stale. Failures are logged, never thrown: the
+ * order is already paid, so purchase retries happen from the admin.
  */
 final class OrderPaidListener
 {
     public function __construct(
         private readonly EnviatodoOrderManagerInterface $orderManager,
         private readonly ProviderMap $providerMap,
-        private readonly EnviatodoShipmentRepositoryInterface $repository,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -36,21 +34,23 @@ final class OrderPaidListener
         }
 
         foreach ($subject->getShipments() as $shipment) {
-            $code = $shipment->getMethod()?->getCode();
+            $method = $shipment->getMethod();
+            $code = $method?->getCode();
             if (null === $code || !$this->providerMap->isBackedByEnviatodo($code)) {
                 continue;
             }
 
-            $draft = $this->repository->findOneByShipment($shipment);
-            if (null === $draft || $draft->isCompleted()) {
-                $this->logger->debug('Enviatodo label skipped: no completable draft row.');
+            $configuration = $method->getConfiguration();
+            $quote = $configuration['quote'] ?? null;
+            if (!\is_array($quote)) {
+                $this->logger->error('Enviatodo label skipped: method has no quote configuration.', ['method' => $code]);
 
                 continue;
             }
 
             try {
-                $this->orderManager->completeDraft($draft);
-            } catch (\RuntimeException $exception) {
+                $this->orderManager->purchaseForPaidShipment($shipment, $quote);
+            } catch (\Throwable $exception) {
                 $this->logger->error('Enviatodo label purchase failed.', ['error' => $exception->getMessage()]);
             }
         }

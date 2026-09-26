@@ -12,4 +12,9 @@ interface EnviatodoOrderManagerInterface
     public function createDraft(ShipmentInterface $shipment, string $quoteUuid, string $methodCode): EnviatodoShipment;
 
     public function completeDraft(EnviatodoShipment $draft): void;
+
+    /**
+     * @param array<mixed> $quoteConfig
+     */
+    public function purchaseForPaidShipment(ShipmentInterface $shipment, array $quoteConfig): void;
 }

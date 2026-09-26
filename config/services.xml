@@ -60,6 +60,7 @@
         <service id="sarissaops_enviatodo.order_manager" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManager">
             <argument type="service" id="sarissaops_enviatodo.order_api" />
             <argument type="service" id="sarissaops_enviatodo.balance_api" />
+            <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
             <argument type="service" id="doctrine" />
             <argument type="service" id="logger" />
@@ -69,7 +70,6 @@
         <service id="sarissaops_enviatodo.listener.order_paid" class="SarissaOps\SyliusEnviatodoPlugin\EventListener\OrderPaidListener">
             <argument type="service" id="sarissaops_enviatodo.order_manager" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
-            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
             <argument type="service" id="logger" />
             <tag name="kernel.event_listener" event="workflow.sylius_order_payment.completed.pay" method="__invoke" />
         </service>
@@ -77,6 +77,8 @@
         <service id="sarissaops_enviatodo.controller.shop.quote" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Shop\QuoteController" public="true">
             <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="sylius.repository.order" />
+            <argument type="service" id="sylius.context.channel" />
             <tag name="controller.service_arguments" />
         </service>
 
@@ -124,17 +126,20 @@
         <service id="sarissaops_enviatodo.controller.admin.address" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\AddressController" public="true">
             <argument type="service" id="sarissaops_enviatodo.address_book" />
             <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="security.authorization_checker" />
             <tag name="controller.service_arguments" />
         </service>
 
         <service id="sarissaops_enviatodo.controller.admin.package" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PackageController" public="true">
             <argument type="service" id="sarissaops_enviatodo.package_catalog" />
             <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="security.authorization_checker" />
             <tag name="controller.service_arguments" />
         </service>
 
         <service id="sarissaops_enviatodo.controller.admin.carrier" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\CarrierController" public="true">
             <argument type="service" id="sarissaops_enviatodo.carrier_catalog" />
+            <argument type="service" id="security.authorization_checker" />
             <tag name="controller.service_arguments" />
         </service>
 
@@ -143,6 +148,7 @@
             <argument type="service" id="sylius.context.channel" />
             <argument type="service" id="sarissaops_enviatodo.component_calculator" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
+            <argument type="service" id="logger" />
             <tag name="api_platform.state_processor" />
         </service>
 
@@ -170,6 +176,8 @@
             <argument type="service" id="sarissaops_enviatodo.label_service" />
             <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
             <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="logger" />
+            <argument type="service" id="security.authorization_checker" />
             <tag name="controller.service_arguments" />
         </service>
 
@@ -186,6 +194,8 @@
         <service id="sarissaops_enviatodo.controller.admin.pickup" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PickupController" public="true">
             <argument type="service" id="sarissaops_enviatodo.pickup_scheduler" />
             <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="security.authorization_checker" />
+            <argument type="service" id="security.helper" />
             <tag name="controller.service_arguments" />
         </service>
     </services>

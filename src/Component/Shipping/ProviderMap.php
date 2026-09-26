@@ -27,6 +27,11 @@ final class ProviderMap
             ) {
                 throw new \InvalidArgumentException('Each provider map row needs string provider_id and provider_service_id values.');
             }
+            // The API only understands numeric ids; a typo like 'EXPRESS'
+            // would otherwise cast to 0 and silently mis-quote.
+            if (!ctype_digit($row['provider_id']) || !ctype_digit($row['provider_service_id'])) {
+                throw new \InvalidArgumentException(sprintf('Provider map row "%s" needs numeric provider_id and provider_service_id values.', $methodCode));
+            }
             $this->map[$methodCode] = ['provider_id' => $row['provider_id'], 'provider_service_id' => $row['provider_service_id']];
         }
     }

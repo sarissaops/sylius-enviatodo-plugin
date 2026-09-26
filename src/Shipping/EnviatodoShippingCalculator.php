@@ -7,8 +7,8 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Shipping;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\NoRateAvailableException;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ProviderMap;
-use Sylius\Component\Core\Model\OrderInterface as CoreOrderInterface;
-use Sylius\Component\Core\Model\ShipmentInterface as CoreShipmentInterface;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\ShipmentContact;
 use Sylius\Component\Shipping\Calculator\CalculatorInterface;
 use Sylius\Component\Shipping\Model\ShipmentInterface;
 
@@ -36,24 +36,25 @@ final class EnviatodoShippingCalculator implements CalculatorInterface
         $code = $subject->getMethod()?->getCode();
         $mapping = null !== $code ? $this->providerMap->getProviderService($code) : null;
         if (null === $mapping) {
-            throw new \LogicException('Enviatodo calculator cannot price shipping methods outside the provider map.');
+            throw new NoRateAvailableException('Enviatodo calculator cannot price shipping methods outside the provider map.');
         }
 
         $quote = $configuration['quote'] ?? null;
         if (!\is_array($quote)) {
-            throw new \InvalidArgumentException('Enviatodo calculator configuration requires a "quote" payload array.');
+            throw new NoRateAvailableException('Enviatodo calculator configuration requires a "quote" payload array.');
         }
-        /** @var array<string, mixed> $quoteConfig */
-        $quoteConfig = $quote;
+        $quoteConfig = QuotePayload::normalize($quote);
 
         try {
             $rate = $this->calculator->rateForAddress(
                 $quoteConfig,
-                $this->contact($subject, $quoteConfig),
+                ShipmentContact::fromShipment($subject, ShipmentContact::fallbackTelephone($quoteConfig)),
                 $mapping['provider_id'],
                 $mapping['provider_service_id'],
             );
-        } catch (\InvalidArgumentException $exception) {
+        } catch (NoRateAvailableException $exception) {
+            throw $exception;
+        } catch (\Exception $exception) {
             throw new NoRateAvailableException(
                 'Enviatodo cannot quote this destination: ' . $exception->getMessage(),
                 0,
@@ -74,40 +75,5 @@ final class EnviatodoShippingCalculator implements CalculatorInterface
     public function getType(): string
     {
         return self::TYPE;
-    }
-
-    /**
-     * @param array<string, mixed> $quoteConfig
-     *
-     * @return array{fullName: string, email: string, telephone: string, street: string, postcode: string, countryCode: string}
-     */
-    private function contact(ShipmentInterface $subject, array $quoteConfig): array
-    {
-        if (!$subject instanceof CoreShipmentInterface) {
-            throw new NoRateAvailableException('Enviatodo calculator requires a core shipment carrying the order.');
-        }
-        $order = $subject->getOrder();
-        if (!$order instanceof CoreOrderInterface) {
-            throw new NoRateAvailableException('Enviatodo calculator requires a shipment attached to an order.');
-        }
-        $address = $order->getShippingAddress();
-        if (null === $address) {
-            throw new NoRateAvailableException('Enviatodo calculator requires an order shipping address.');
-        }
-
-        $contact = $quoteConfig['contact'] ?? null;
-        $fallbackTelephone = '';
-        if (\is_array($contact) && isset($contact['telephone']) && \is_scalar($contact['telephone'])) {
-            $fallbackTelephone = trim((string) $contact['telephone']);
-        }
-
-        return [
-            'fullName' => trim(sprintf('%s %s', (string) $address->getFirstName(), (string) $address->getLastName())),
-            'email' => (string) $order->getCustomer()?->getEmail(),
-            'telephone' => (string) ($address->getPhoneNumber() ?? $order->getBillingAddress()?->getPhoneNumber() ?? ('' !== $fallbackTelephone ? $fallbackTelephone : '')),
-            'street' => (string) $address->getStreet(),
-            'postcode' => (string) $address->getPostcode(),
-            'countryCode' => (string) $address->getCountryCode(),
-        ];
     }
 }

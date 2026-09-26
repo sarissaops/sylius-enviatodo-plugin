@@ -33,7 +33,7 @@ final class BulkLabelsProcessorTest extends TestCase
         $record = new EnviatodoShipment($this->createMock(ShipmentInterface::class), 'uuid-1', '9', '11');
         $record->setGuideId('7');
         $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
-        $repository->method('findById')->willReturnCallback(
+        $repository->method('findOneByShipmentId')->willReturnCallback(
             static fn (int $id): ?EnviatodoShipment => 1 === $id ? $record : null,
         );
 
@@ -50,7 +50,7 @@ final class BulkLabelsProcessorTest extends TestCase
     public function testProcessReturnsEmptyResultWithoutGuideIds(): void
     {
         $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
-        $repository->method('findById')->willReturn(null);
+        $repository->method('findOneByShipmentId')->willReturn(null);
 
         $this->expectException(UnprocessableEntityHttpException::class);
         $this->processor($repository)->process(
@@ -65,5 +65,23 @@ final class BulkLabelsProcessorTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $this->processor($repository)->process(new \stdClass(), new \ApiPlatform\Metadata\Post());
+    }
+
+    public function testProcessMapsProviderFailuresToBadGateway(): void
+    {
+        $record = new EnviatodoShipment($this->createMock(ShipmentInterface::class), 'uuid-1', '9', '11');
+        $record->setGuideId('7');
+        $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
+        $repository->method('findOneByShipmentId')->willReturn($record);
+        $guideApi = $this->createMock(GuideApi::class);
+        $guideApi->method('binaries')->willThrowException(\SarissaOps\Enviatodo\Exception\HttpServerException::serverError());
+        $processor = new BulkLabelsProcessor(new EnviatodoLabelService($guideApi), $repository, new NullLogger());
+
+        try {
+            $processor->process(new BulkLabelsRequest([1]), new \ApiPlatform\Metadata\Post());
+            $this->fail('Expected HttpException was not thrown.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(502, $exception->getStatusCode());
+        }
     }
 }

@@ -12,6 +12,9 @@ use SarissaOps\Enviatodo\Model\Pickup\PickupResponse;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PickupController;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPickupScheduler;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class PickupControllerTest extends TestCase
@@ -20,8 +23,14 @@ final class PickupControllerTest extends TestCase
     {
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+        $user = $this->createMock(UserInterface::class);
+        $user->method('getUserIdentifier')->willReturn('admin-1');
+        $security = $this->createMock(Security::class);
+        $security->method('getUser')->willReturn($user);
 
-        return new PickupController(new EnviatodoPickupScheduler($pickupApi, new NullLogger(), false), $csrf);
+        return new PickupController(new EnviatodoPickupScheduler($pickupApi, new NullLogger(), false), $csrf, $authorizationChecker, $security);
     }
 
     private function pickupData(): PickupApi

@@ -35,4 +35,11 @@ final class ProviderMapTest extends TestCase
 
         new ProviderMap(['enviatodo_estafeta' => '9']);
     }
+
+    public function testNonNumericIdsAreRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new ProviderMap(['enviatodo_estafeta' => ['provider_id' => 'EXPRESS', 'provider_service_id' => '11']]);
+    }
 }

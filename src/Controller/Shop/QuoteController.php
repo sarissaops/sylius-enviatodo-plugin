@@ -10,11 +10,20 @@ use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\Calculator\EnviatodoCalculator;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\CsrfProtection;
+use Sylius\Component\Channel\Context\ChannelContextInterface;
+use Sylius\Component\Core\Model\OrderInterface;
+use Sylius\Component\Core\OrderCheckoutStates;
+use Sylius\Component\Core\Repository\OrderRepositoryInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
+/**
+ * Guest checkout rate preview. Scoped to a live cart in the request
+ * channel: the cart token binds quota burn to a real checkout session
+ * instead of serving anonymous arbitrary quotes.
+ */
 final class QuoteController
 {
     public const CSRF_TOKEN_ID = 'enviatodo_quote';
@@ -22,6 +31,9 @@ final class QuoteController
     public function __construct(
         private readonly EnviatodoCalculator $calculator,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        /** @var OrderRepositoryInterface<OrderInterface> */
+        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly ChannelContextInterface $channelContext,
     ) {
     }
 
@@ -36,6 +48,18 @@ final class QuoteController
         if (!\is_array($body)) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
+        $cartToken = $body['cart_token'] ?? null;
+        if (!\is_string($cartToken) || '' === $cartToken) {
+            return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
+        }
+        $order = $this->orderRepository->findOneBy(['tokenValue' => $cartToken]);
+        if (!$order instanceof OrderInterface ||
+            $order->getChannel()?->getCode() !== $this->channelContext->getChannel()->getCode() ||
+            $order->getCheckoutState() !== OrderCheckoutStates::STATE_CART
+        ) {
+            return new JsonResponse(['error' => 'cart_not_found'], Response::HTTP_NOT_FOUND);
+        }
+
         $origin = $body['origin'] ?? null;
         $destination = $body['destination'] ?? null;
         $package = $body['package'] ?? null;
@@ -46,6 +70,10 @@ final class QuoteController
         if (!\is_int($quantity)) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
+        $shippingType = $body['shipping_type'] ?? '1';
+        if (!\is_string($shippingType) || '' === $shippingType) {
+            return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
+        }
 
         try {
             $payload = QuotePayload::create(
@@ -53,11 +81,12 @@ final class QuoteController
                 QuotePayload::normalize($destination),
                 QuotePayload::normalize($package),
                 $quantity,
+                $shippingType,
             );
             $quoted = $this->calculator->rates($payload);
         } catch (\InvalidArgumentException) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
-        } catch (EnviatodoException | HttpClientException | HttpServerException) {
+        } catch (EnviatodoException | HttpClientException | HttpServerException | \RuntimeException) {
             return new JsonResponse(['error' => 'quote_unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 

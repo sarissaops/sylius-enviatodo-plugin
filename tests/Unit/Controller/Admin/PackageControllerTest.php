@@ -12,6 +12,7 @@ use SarissaOps\Enviatodo\Model\Package\SavedPackage;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\PackageController;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoPackageCatalog;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class PackageControllerTest extends TestCase
@@ -27,7 +28,15 @@ final class PackageControllerTest extends TestCase
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
 
-        return new PackageController(new EnviatodoPackageCatalog($packageApi, new NullLogger()), $csrf);
+        return new PackageController(new EnviatodoPackageCatalog($packageApi, new NullLogger()), $csrf, $this->authorizationChecker());
+    }
+
+    private function authorizationChecker(): AuthorizationCheckerInterface
+    {
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+
+        return $authorizationChecker;
     }
 
     private function packageApi(): PackageApi

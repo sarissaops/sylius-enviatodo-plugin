@@ -32,4 +32,11 @@ final class EnviatodoShipmentRepository extends ServiceEntityRepository implemen
 
         return $found instanceof EnviatodoShipment ? $found : null;
     }
+
+    public function findOneByShipmentId(int $syliusShipmentId): ?EnviatodoShipment
+    {
+        $found = $this->findOneBy(['shipment' => $syliusShipmentId]);
+
+        return $found instanceof EnviatodoShipment ? $found : null;
+    }
 }

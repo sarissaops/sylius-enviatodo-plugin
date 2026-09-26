@@ -163,6 +163,21 @@ class EnviatodoShipment
         $this->updatedAt = new \DateTimeImmutable();
     }
 
+    /**
+     * Points an uncompleted draft at a newer quote (re-quote loop at
+     * checkout). Completed rows are immutable: buying already happened.
+     */
+    public function refreshQuote(string $quoteUuid, string $providerId, string $providerServiceId): void
+    {
+        if ($this->isCompleted()) {
+            throw new \LogicException('Completed Enviatodo drafts keep the spent quote.');
+        }
+        $this->quoteUuid = $quoteUuid;
+        $this->providerId = $providerId;
+        $this->providerServiceId = $providerServiceId;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function getAmountMinor(): int
     {
         return $this->amountMinor;

@@ -9,6 +9,7 @@ use SarissaOps\Enviatodo\Api\ZipCodeApi;
 use SarissaOps\Enviatodo\Model\Quote\Quote;
 use SarissaOps\Enviatodo\Model\ZipCode\ZipCode;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\DestinationAddress;
+use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\NoRateAvailableException;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotedRates;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\QuotePayload;
 use SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\RateResult;
@@ -54,15 +55,15 @@ final class EnviatodoCalculator
     }
 
     /**
-     * Quotes a checkout destination: resolves the settlement from the zip-code
-     * catalog, then matches one provider pair. Returns null when the catalog
-     * has no settlement or the quote carries no matching available row —
-     * callers turn that into a hidden method, never a zero price.
+     * Quotes a checkout destination and keeps the uuid next to the rows, so
+     * paid-order purchase spends the same quote instead of re-quoting blind.
+     * Throws NoRateAvailableException when no settlement or rows exist;
+     * InvalidArgumentException stays reserved for misconfiguration.
      *
      * @param array<string, mixed> $quoteConfig method configuration: full `origin` address + `package`
      * @param array{fullName: string, email: string, telephone: string, street: string, postcode: string, countryCode: string} $contact
      */
-    public function rateForAddress(array $quoteConfig, array $contact, string $providerId, string $serviceId): ?RateResult
+    public function quoteForAddress(array $quoteConfig, array $contact, string $providerId, string $serviceId): QuotedRates
     {
         $origin = $quoteConfig['origin'] ?? null;
         $package = $quoteConfig['package'] ?? null;
@@ -80,23 +81,49 @@ final class EnviatodoCalculator
         }
 
         $postcode = trim($contact['postcode']);
-        if ('' === $postcode) {
-            return null;
-        }
-        $settlement = $this->zipCodeApi->show($postcode);
+        $settlement = '' === $postcode ? null : $this->zipCodeApi->show($postcode);
         if (!$settlement instanceof ZipCode || [] === $settlement->getItems()) {
-            return null;
+            throw new NoRateAvailableException(sprintf('Enviatodo has no settlement for postcode "%s".', $postcode));
+        }
+
+        $quantity = $quoteConfig['quantity'] ?? 1;
+        if (!\is_int($quantity) || 1 > $quantity) {
+            throw new \InvalidArgumentException('Enviatodo method configuration requires a positive integer "quantity".');
+        }
+        $shippingType = $quoteConfig['shipping_type'] ?? '1';
+        if (!\is_string($shippingType) || '' === $shippingType) {
+            throw new \InvalidArgumentException('Enviatodo method configuration requires a non-empty "shipping_type".');
         }
 
         $payload = [
-            'shipping_type' => $quoteConfig['shipping_type'] ?? '1',
-            'quantity' => $quoteConfig['quantity'] ?? 1,
+            'shipping_type' => $shippingType,
+            'quantity' => $quantity,
             'origin' => $origin,
             'destination' => DestinationAddress::fromParts($contact, $settlement->getItems()[0]),
             'package' => $package,
         ];
 
-        foreach ($this->rates($payload, $providerId, $serviceId)->getRates() as $rate) {
+        return $this->rates($payload, $providerId, $serviceId);
+    }
+
+    /**
+     * Quotes a checkout destination: resolves the settlement from the zip-code
+     * catalog, then matches one provider pair. Returns null when the catalog
+     * has no settlement or the quote carries no matching available row —
+     * callers turn that into a hidden method, never a zero price.
+     *
+     * @param array<string, mixed> $quoteConfig method configuration: full `origin` address + `package`
+     * @param array{fullName: string, email: string, telephone: string, street: string, postcode: string, countryCode: string} $contact
+     */
+    public function rateForAddress(array $quoteConfig, array $contact, string $providerId, string $serviceId): ?RateResult
+    {
+        try {
+            $quoted = $this->quoteForAddress($quoteConfig, $contact, $providerId, $serviceId);
+        } catch (NoRateAvailableException) {
+            return null;
+        }
+
+        foreach ($quoted->getRates() as $rate) {
             if ($rate->getProviderId() === $providerId && $rate->getProviderServiceId() === $serviceId) {
                 return $rate;
             }
