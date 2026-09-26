@@ -59,16 +59,17 @@ final class ShipmentBulkController
             }
             $requestedIds[] = $shipmentId;
         }
+        $requestedIds = array_values(array_unique($requestedIds));
+        if (self::MAX_SHIPMENTS < \count($requestedIds)) {
+            return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
+        }
 
         $guideIds = [];
-        foreach (array_unique($requestedIds) as $shipmentId) {
+        foreach ($requestedIds as $shipmentId) {
             $guideId = $this->repository->findOneByShipmentId($shipmentId)?->getGuideId();
             if (null !== $guideId && is_numeric($guideId)) {
                 $guideIds[] = (int) $guideId;
             }
-        }
-        if (\count($guideIds) > self::MAX_SHIPMENTS) {
-            return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
         // UI-tolerant contract: total misses return empty 200 so the grid
         // action never breaks; the headless twin answers 422 instead.

@@ -85,7 +85,7 @@ final class EnviatodoPickupScheduler
             throw new \RuntimeException('PickupApi must hydrate PickupResponse models for scheduling.');
         }
 
-        $this->logger->info('Enviatodo pickup scheduled.', ['origins' => array_keys($origins)]);
+        $this->logger->info('Enviatodo pickup scheduled.', ['orders' => \count($rows)]);
 
         return $result->isCreated();
     }

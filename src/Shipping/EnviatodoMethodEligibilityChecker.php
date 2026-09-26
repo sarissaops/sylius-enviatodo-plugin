@@ -54,6 +54,37 @@ final class EnviatodoMethodEligibilityChecker implements ShippingMethodEligibili
         return $settlement instanceof ZipCode && [] !== $settlement->getItems();
     }
 
+    /**
+     * Deterministic unquotability for the recalculation guard: misconfigured
+     * methods and postcodes the catalog resolved-but-empty. Transport
+     * failures are transient by definition — the guard preserves the
+     * assigned method instead of stripping carts during an outage.
+     */
+    public function isDeterministicallyIneligible(ShippingSubjectInterface $shippingSubject, ShippingMethodInterface $shippingMethod): bool
+    {
+        $code = $shippingMethod->getCode();
+        if (null === $code || null === $this->providerMap->getProviderService($code)) {
+            return false;
+        }
+
+        if (!$this->configurationComplete($shippingMethod)) {
+            return true;
+        }
+
+        $postcode = $this->destinationPostcode($shippingSubject);
+        if ('' === $postcode) {
+            return true;
+        }
+
+        try {
+            $settlement = $this->zipCodeApi->show($postcode);
+        } catch (\Exception) {
+            return false;
+        }
+
+        return !$settlement instanceof ZipCode || [] === $settlement->getItems();
+    }
+
     private function configurationComplete(ShippingMethodInterface $shippingMethod): bool
     {
         $configuration = $shippingMethod->getConfiguration();

@@ -94,6 +94,36 @@ final class ShipmentCancelControllerTest extends TestCase
         $this->assertSame(403, $this->controller($this->orderApi(), true, false)->cancelAction($request, 5)->getStatusCode());
     }
 
+    public function testCancelActionSkipsAlreadyCancelledRecords(): void
+    {
+        $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
+        $record = new EnviatodoShipment($this->createMock(ShipmentInterface::class), 'uuid-1', '9', '11');
+        $record->complete('TRK1', 23200);
+        $record->markCancelled();
+        $repository->method('findOneByShipmentId')->willReturn($record);
+        $orderApi = $this->createMock(OrderApi::class);
+        $orderApi->expects($this->never())->method('cancel');
+        $csrf = $this->createMock(CsrfTokenManagerInterface::class);
+        $csrf->method('isTokenValid')->willReturn(true);
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->willReturn(true);
+        $controller = new ShipmentCancelController(
+            new ShipmentCanceller($orderApi, new NullLogger()),
+            $repository,
+            $this->createMock(ManagerRegistry::class),
+            $csrf,
+            $authorizationChecker,
+        );
+        $request = Request::create('/admin/enviatodo/shipments/5/cancel', 'POST', [], [], [], [], (string) json_encode($this->body()));
+
+        $response = $controller->cancelAction($request, 5);
+
+        $this->assertSame(200, $response->getStatusCode());
+        /** @var array<string, mixed> $data */
+        $data = json_decode((string) $response->getContent(), true);
+        $this->assertTrue($data['already_cancelled']);
+    }
+
     public function testCancelActionMapsProviderFailuresToBadGateway(): void
     {
         $orderApi = $this->createMock(OrderApi::class);

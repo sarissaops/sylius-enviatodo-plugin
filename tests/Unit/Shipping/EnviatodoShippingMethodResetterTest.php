@@ -101,6 +101,22 @@ final class EnviatodoShippingMethodResetterTest extends TestCase
         $this->assertNull($shipment->getMethod());
     }
 
+    public function testPreservesMethodsOnTransportFailure(): void
+    {
+        $zipCodeApi = $this->createMock(ZipCodeApi::class);
+        $zipCodeApi->method('show')->willThrowException(new \RuntimeException('sandbox down'));
+        $checker = new EnviatodoMethodEligibilityChecker(
+            new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
+            $zipCodeApi,
+        );
+        $order = $this->orderWithShipment('enviatodo_estafeta', '06600');
+        (new EnviatodoShippingMethodResetter($checker))->process($order);
+
+        /** @var ShipmentInterface $shipment */
+        $shipment = $order->getShipments()->first();
+        $this->assertNotNull($shipment->getMethod());
+    }
+
     public function testIgnoresMethodsOutsideTheMap(): void
     {
         $zipCodeApi = $this->createMock(ZipCodeApi::class);

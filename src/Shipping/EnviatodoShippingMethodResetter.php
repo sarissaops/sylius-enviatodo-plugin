@@ -35,13 +35,14 @@ final class EnviatodoShippingMethodResetter implements OrderProcessorInterface
             }
 
             try {
-                $eligible = $this->eligibilityChecker->isEligible($shipment, $method);
+                $clear = $this->eligibilityChecker->isDeterministicallyIneligible($shipment, $method);
             } catch (\Exception) {
-                $eligible = false;
+                $clear = false;
             }
             // Unmapped codes abstain as eligible inside the checker, so only
-            // our own unquotable methods ever reach the reset.
-            if (!$eligible) {
+            // our own deterministically unquotable methods ever reach reset.
+            // Transient provider failures preserve the assignment.
+            if ($clear) {
                 $shipment->setMethod(null);
             }
         }

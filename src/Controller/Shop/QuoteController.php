@@ -53,9 +53,14 @@ final class QuoteController
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
         $order = $this->orderRepository->findOneBy(['tokenValue' => $cartToken]);
-        if (!$order instanceof OrderInterface ||
-            $order->getChannel()?->getCode() !== $this->channelContext->getChannel()->getCode() ||
-            $order->getCheckoutState() !== OrderCheckoutStates::STATE_CART
+        try {
+            $channelCode = $this->channelContext->getChannel()->getCode();
+        } catch (\Exception) {
+            return new JsonResponse(['error' => 'cart_not_found'], Response::HTTP_NOT_FOUND);
+        }
+        if (!$order instanceof OrderInterface
+            || $order->getChannel()?->getCode() !== $channelCode
+            || $order->getCheckoutState() !== OrderCheckoutStates::STATE_CART
         ) {
             return new JsonResponse(['error' => 'cart_not_found'], Response::HTTP_NOT_FOUND);
         }
@@ -67,7 +72,7 @@ final class QuoteController
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
         $quantity = $body['quantity'] ?? 1;
-        if (!\is_int($quantity)) {
+        if (!\is_int($quantity) || 1 > $quantity || 100 < $quantity) {
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
         $shippingType = $body['shipping_type'] ?? '1';

@@ -80,6 +80,32 @@ final class ShipmentCancelProcessorTest extends TestCase
         $this->processor($repository)->process(new \stdClass(), new \ApiPlatform\Metadata\Post(), ['shipmentId' => 5]);
     }
 
+    public function testProcessSkipsAlreadyCancelledRecords(): void
+    {
+        $record = $this->record();
+        $record->markCancelled();
+        $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
+        $repository->method('findOneByShipmentId')->willReturn($record);
+        $orderApi = $this->createMock(OrderApi::class);
+        $orderApi->expects($this->never())->method('cancel');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $processor = new ShipmentCancelProcessor(
+            new ShipmentCanceller($orderApi, new NullLogger()),
+            $repository,
+            $registry,
+            new NullLogger(),
+        );
+
+        $result = $processor->process(
+            new CancelShipmentRequest('7', 'QA cancel'),
+            new \ApiPlatform\Metadata\Post(),
+            ['shipmentId' => 5],
+        );
+
+        $this->assertSame(5, $result->shipmentId);
+        $this->assertSame('TRK1', $result->trackingId);
+    }
+
     public function testProcessMapsProviderFailuresToBadGateway(): void
     {
         $record = $this->record();

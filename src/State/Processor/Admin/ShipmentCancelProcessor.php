@@ -13,6 +13,7 @@ use SarissaOps\Enviatodo\Exception\HttpClientException;
 use SarissaOps\Enviatodo\Exception\HttpServerException;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\CancelledShipmentResult;
 use SarissaOps\SyliusEnviatodoPlugin\ApiResource\CancelShipmentRequest;
+use SarissaOps\SyliusEnviatodoPlugin\Entity\EnviatodoShipment;
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\ShipmentCanceller;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -51,6 +52,9 @@ final class ShipmentCancelProcessor implements ProcessorInterface
         $trackingId = $record?->getTrackingId();
         if (null === $trackingId || '' === $trackingId) {
             throw new NotFoundHttpException('Shipment not found.');
+        }
+        if (EnviatodoShipment::HANDOVER_CANCELLED === $record->getHandover()) {
+            return new CancelledShipmentResult($shipmentId, $trackingId, '', '');
         }
 
         try {

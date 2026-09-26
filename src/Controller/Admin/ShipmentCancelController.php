@@ -6,6 +6,7 @@ namespace SarissaOps\SyliusEnviatodoPlugin\Controller\Admin;
 
 use Doctrine\Persistence\ManagerRegistry;
 use SarissaOps\SyliusEnviatodoPlugin\Controller\CsrfProtection;
+use SarissaOps\SyliusEnviatodoPlugin\Entity\EnviatodoShipment;
 use SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepositoryInterface;
 use SarissaOps\SyliusEnviatodoPlugin\Shipping\ShipmentCanceller;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -53,6 +54,13 @@ final class ShipmentCancelController
         $trackingId = $record?->getTrackingId();
         if (null === $trackingId || '' === $trackingId) {
             return new JsonResponse(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+        if (EnviatodoShipment::HANDOVER_CANCELLED === $record->getHandover()) {
+            return new JsonResponse([
+                'cancelled' => true,
+                'tracking_id' => $trackingId,
+                'already_cancelled' => true,
+            ]);
         }
 
         try {

@@ -65,7 +65,12 @@ final class LiveRatesProcessor implements ProcessorInterface
         if (!$order instanceof OrderInterface) {
             throw new NotFoundHttpException('Order not found.');
         }
-        if ($order->getChannel()?->getCode() !== $this->channelContext->getChannel()->getCode()) {
+        try {
+            $requestChannelCode = $this->channelContext->getChannel()->getCode();
+        } catch (\Exception $exception) {
+            throw new NotFoundHttpException('Order not found.', $exception);
+        }
+        if ($order->getChannel()?->getCode() !== $requestChannelCode) {
             throw new NotFoundHttpException('Order not found.');
         }
         if (!\in_array($order->getCheckoutState(), [OrderCheckoutStates::STATE_CART, OrderCheckoutStates::STATE_ADDRESSED, OrderCheckoutStates::STATE_SHIPPING_SELECTED], true)) {

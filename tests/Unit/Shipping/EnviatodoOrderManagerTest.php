@@ -118,6 +118,18 @@ final class EnviatodoOrderManagerTest extends TestCase
         $manager->createDraft($this->shipment(), '', 'enviatodo_estafeta');
     }
 
+    public function testCompleteDraftSkipsCompletedRows(): void
+    {
+        [$orderApi, , , , $manager] = $this->manager();
+        $orderApi->expects($this->never())->method('create');
+        $draft = new EnviatodoShipment($this->shipment(), 'uuid-1', '9', '11');
+        $draft->complete('TRK0', 100);
+
+        $manager->completeDraft($draft);
+
+        $this->assertSame('TRK0', $draft->getTrackingId());
+    }
+
     public function testCompleteDraftBuysTheLabelAndStoresTracking(): void
     {
         [$orderApi, , , $entityManager, $manager] = $this->manager();
@@ -342,9 +354,9 @@ final class EnviatodoOrderManagerTest extends TestCase
     {
         $draft = new EnviatodoShipment($this->shipment(), 'uuid-old', '9', '11');
         $entityManager = $this->purchaseEntityManager($draft);
-        $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
-        $entityManager->expects($this->once())->method('lock');
+        $entityManager->expects($this->exactly(2))->method('lock');
 
+        $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
         $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
 
         $this->assertSame('uuid-live', $draft->getQuoteUuid());
