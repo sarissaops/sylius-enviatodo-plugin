@@ -133,15 +133,15 @@ final class EnviatodoStatusSynchronizer
 
             return;
         }
-            $key = $this->statusMap->forOrder($code);
-            if ('unknown' === $key) {
-                $key = $this->statusMap->forPickup($code);
-            }
-            if ('unknown' === $key) {
-                ++$summary['unknown'];
+        $key = $this->statusMap->forOrder($code);
+        if ('unknown' === $key) {
+            $key = $this->statusMap->forPickup($code);
+        }
+        if ('unknown' === $key) {
+            ++$summary['unknown'];
 
-                return;
-            }
+            return;
+        }
         $detail = $row->getDetail();
         $guide = $detail['guide'] ?? null;
         $trackingId = \is_array($guide) ? $this->stringOrEmpty($guide['tracking_id'] ?? null) : '';
@@ -156,20 +156,20 @@ final class EnviatodoStatusSynchronizer
 
             return;
         }
-            if (!$this->mayAdvance($record->getHandover(), $key)) {
-                ++$summary['skipped'];
+        if (!$this->mayAdvance($record->getHandover(), $key)) {
+            ++$summary['skipped'];
 
-                return;
-            }
-            // Creation is the starting state: nothing to write, and counting
-            // it as updated would lie in the summary.
-            if ('label_created' === $key) {
-                ++$summary['skipped'];
+            return;
+        }
+        // Creation is the starting state: nothing to write, and counting
+        // it as updated would lie in the summary.
+        if ('label_created' === $key) {
+            ++$summary['skipped'];
 
-                return;
-            }
-            $this->apply($record, $key, $row->getStatusName());
-            ++$summary['updated'];
+            return;
+        }
+        $this->apply($record, $key, $row->getStatusName());
+        ++$summary['updated'];
     }
 
     private function stringOrEmpty(mixed $value): string
