@@ -133,12 +133,15 @@ final class EnviatodoStatusSynchronizer
 
             return;
         }
-        $key = $this->statusMap->forOrder($code);
-        if ('unknown' === $key) {
-            ++$summary['unknown'];
+            $key = $this->statusMap->forOrder($code);
+            if ('unknown' === $key) {
+                $key = $this->statusMap->forPickup($code);
+            }
+            if ('unknown' === $key) {
+                ++$summary['unknown'];
 
-            return;
-        }
+                return;
+            }
         $detail = $row->getDetail();
         $guide = $detail['guide'] ?? null;
         $trackingId = \is_array($guide) ? $this->stringOrEmpty($guide['tracking_id'] ?? null) : '';
@@ -153,13 +156,20 @@ final class EnviatodoStatusSynchronizer
 
             return;
         }
-        if (!$this->mayAdvance($record->getHandover(), $key)) {
-            ++$summary['skipped'];
+            if (!$this->mayAdvance($record->getHandover(), $key)) {
+                ++$summary['skipped'];
 
-            return;
-        }
-        $this->apply($record, $key, $row->getStatusName());
-        ++$summary['updated'];
+                return;
+            }
+            // Creation is the starting state: nothing to write, and counting
+            // it as updated would lie in the summary.
+            if ('label_created' === $key) {
+                ++$summary['skipped'];
+
+                return;
+            }
+            $this->apply($record, $key, $row->getStatusName());
+            ++$summary['updated'];
     }
 
     private function stringOrEmpty(mixed $value): string
@@ -178,6 +188,10 @@ final class EnviatodoStatusSynchronizer
         }
         $currentRank = self::RANK[$current] ?? 0;
         $nextRank = self::RANK[$next] ?? 0;
+        if (6 <= $currentRank) {
+            // Terminal states never move, not even laterally.
+            return false;
+        }
 
         return $nextRank >= $currentRank;
     }
@@ -185,8 +199,9 @@ final class EnviatodoStatusSynchronizer
     private function apply(EnviatodoShipment $record, string $key, string $statusName): void
     {
         match ($key) {
-            'label_created' => null,
             EnviatodoShipment::HANDOVER_IN_PICKUP => $record->markInPickup(),
+            // A generated pickup is actionable the same way as an in-pickup one.
+            'pickup_created' => $record->markInPickup(),
             EnviatodoShipment::HANDOVER_IN_TRANSIT => $record->markInTransit(),
             EnviatodoShipment::HANDOVER_DELIVERED => $record->markDelivered(),
             EnviatodoShipment::HANDOVER_CANCELLED => $record->markCancelled(),

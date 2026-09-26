@@ -337,4 +337,53 @@ final class EnviatodoOrderManagerTest extends TestCase
 
         $this->addToAssertionCount(1);
     }
+
+    public function testPurchaseForPaidShipmentRefreshesStaleDrafts(): void
+    {
+        $draft = new EnviatodoShipment($this->shipment(), 'uuid-old', '9', '11');
+        $entityManager = $this->purchaseEntityManager($draft);
+        $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
+        $entityManager->expects($this->once())->method('lock');
+
+        $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
+
+        $this->assertSame('uuid-live', $draft->getQuoteUuid());
+        $this->assertTrue($draft->isCompleted());
+    }
+
+    public function testPurchaseForPaidShipmentRollsBackFailedBuys(): void
+    {
+        $entityManager = $this->purchaseEntityManager(null);
+        $orderApi = $this->createMock(OrderApi::class);
+        $orderApi->method('create')->willThrowException(new EnviatodoOrderException('provider down'));
+        $balanceApi = $this->createMock(BalanceApi::class);
+        $balanceApi->method('show')->willReturn(Balance::create(['balance' => 1000.0]));
+        $quoteApi = $this->createMock(QuoteApi::class);
+        $quoteApi->method('byService')->willReturn(Quote::create($this->quoteData()));
+        $zipCodeApi = $this->createMock(ZipCodeApi::class);
+        $zipCodeApi->method('show')->willReturn(\SarissaOps\Enviatodo\Model\ZipCode\ZipCode::create([
+            'component' => 'zip', 'type' => 'list', 'items' => [[
+                'zip_code' => '06600', 'suburb_name' => 'Juárez', 'municipality' => 'Cuauhtémoc',
+                'city' => 'Ciudad de México', 'state' => 'Ciudad de México', 'state_code' => 'DF',
+            ]],
+        ]));
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManager')->willReturn($entityManager);
+        $manager = new EnviatodoOrderManager(
+            $orderApi,
+            $balanceApi,
+            new EnviatodoCalculator($quoteApi, $zipCodeApi),
+            new ProviderMap(['enviatodo_estafeta' => ['provider_id' => '9', 'provider_service_id' => '11']]),
+            $registry,
+            new NullLogger(),
+            false,
+        );
+
+        try {
+            $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
+            $this->fail('Expected EnviatodoOrderException was not thrown.');
+        } catch (EnviatodoOrderException) {
+            $this->addToAssertionCount(1);
+        }
+    }
 }

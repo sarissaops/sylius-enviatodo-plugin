@@ -23,20 +23,14 @@ final class PackageControllerTest extends TestCase
         return ['id' => '5', 'name' => 'Box', 'default_pkg' => '0', 'bill_weight' => '1'];
     }
 
-    private function controller(PackageApi $packageApi, bool $csrfValid): PackageController
+    private function controller(PackageApi $packageApi, bool $csrfValid, bool $admin = true): PackageController
     {
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
-
-        return new PackageController(new EnviatodoPackageCatalog($packageApi, new NullLogger()), $csrf, $this->authorizationChecker());
-    }
-
-    private function authorizationChecker(): AuthorizationCheckerInterface
-    {
         $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
-        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn($admin);
 
-        return $authorizationChecker;
+        return new PackageController(new EnviatodoPackageCatalog($packageApi, new NullLogger()), $csrf, $authorizationChecker);
     }
 
     private function packageApi(): PackageApi
@@ -94,5 +88,12 @@ final class PackageControllerTest extends TestCase
 
         $this->assertSame(403, $controller->saveAction($request)->getStatusCode());
         $this->assertSame(403, $controller->deleteAction(Request::create('/admin/enviatodo/packages/5/delete', 'POST'), 5)->getStatusCode());
+    }
+
+    public function testActionsForbidNonAdministrators(): void
+    {
+        $controller = $this->controller($this->packageApi(), true, false);
+
+        $this->assertSame(403, $controller->listAction(Request::create('/admin/enviatodo/packages', 'GET'))->getStatusCode());
     }
 }

@@ -102,6 +102,7 @@ final class LiveRatesProcessor implements ProcessorInterface
                     QuotePayload::normalize($data->destination),
                     QuotePayload::normalize($data->package),
                     $data->quantity,
+                    $data->shippingType,
                 ),
             );
         } catch (\InvalidArgumentException $exception) {

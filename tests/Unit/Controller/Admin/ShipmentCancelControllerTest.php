@@ -93,4 +93,13 @@ final class ShipmentCancelControllerTest extends TestCase
 
         $this->assertSame(403, $this->controller($this->orderApi(), true, false)->cancelAction($request, 5)->getStatusCode());
     }
+
+    public function testCancelActionMapsProviderFailuresToBadGateway(): void
+    {
+        $orderApi = $this->createMock(OrderApi::class);
+        $orderApi->method('cancel')->willThrowException(\SarissaOps\Enviatodo\Exception\HttpServerException::serverError());
+        $request = Request::create('/admin/enviatodo/shipments/5/cancel', 'POST', [], [], [], [], (string) json_encode($this->body()));
+
+        $this->assertSame(502, $this->controller($orderApi, true)->cancelAction($request, 5)->getStatusCode());
+    }
 }

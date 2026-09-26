@@ -79,4 +79,31 @@ final class ShipmentCancelProcessorTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->processor($repository)->process(new \stdClass(), new \ApiPlatform\Metadata\Post(), ['shipmentId' => 5]);
     }
+
+    public function testProcessMapsProviderFailuresToBadGateway(): void
+    {
+        $record = $this->record();
+        $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
+        $repository->method('findOneByShipmentId')->willReturn($record);
+        $orderApi = $this->createMock(OrderApi::class);
+        $orderApi->method('cancel')->willThrowException(\SarissaOps\Enviatodo\Exception\HttpServerException::serverError());
+        $registry = $this->createMock(ManagerRegistry::class);
+        $processor = new ShipmentCancelProcessor(
+            new ShipmentCanceller($orderApi, new NullLogger()),
+            $repository,
+            $registry,
+            new NullLogger(),
+        );
+
+        try {
+            $processor->process(
+                new CancelShipmentRequest('7', 'QA cancel'),
+                new \ApiPlatform\Metadata\Post(),
+                ['shipmentId' => 5],
+            );
+            $this->fail('Expected HttpException was not thrown.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(502, $exception->getStatusCode());
+        }
+    }
 }

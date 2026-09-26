@@ -127,8 +127,10 @@ final class PickupControllerTest extends TestCase
 
     public function testActionsForbidNonAdministrators(): void
     {
-        $request = Request::create('/admin/enviatodo/pickups/queue?providers=9', 'GET');
+        $queue = Request::create('/admin/enviatodo/pickups/queue?providers=9', 'GET');
+        $cancel = Request::create('/admin/enviatodo/pickups/29114/cancel', 'POST', [], [], [], [], (string) json_encode(['description' => 'x']));
 
-        $this->assertSame(403, $this->controller($this->pickupData(), true, false)->queueAction($request)->getStatusCode());
+        $this->assertSame(403, $this->controller($this->pickupData(), true, false)->queueAction($queue)->getStatusCode());
+        $this->assertSame(403, $this->controller($this->pickupData(), true, false)->cancelAction($cancel, 29114)->getStatusCode());
     }
 }

@@ -24,6 +24,9 @@ final class LiveRatesQuoteRequest
         #[Assert\Positive]
         #[Assert\LessThanOrEqual(100)]
         public int $quantity = 1,
+        #[Groups(['enviatodo:shop:live_rates:write'])]
+        #[Assert\NotBlank]
+        public string $shippingType = '1',
     ) {
     }
 }

@@ -75,6 +75,13 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.controller.admin.carrier',
             'sarissaops_enviatodo.state_processor.shop.live_rates',
             'sarissaops_enviatodo.state_processor.admin.bulk_labels',
+            'sarissaops_enviatodo.shipping_eligibility_checker',
+            'sarissaops_enviatodo.order_processor.shipping_method_reset',
+            'sarissaops_enviatodo.status_map',
+            'sarissaops_enviatodo.status_synchronizer',
+            'sarissaops_enviatodo.command.sync_statuses',
+            'sarissaops_enviatodo.state_processor.admin.shipment_cancel',
+            'sarissaops_enviatodo.controller.admin.shipment_cancel',
         ] as $id) {
             $this->assertTrue($container->hasDefinition($id), $id);
         }
@@ -123,9 +130,24 @@ final class ContainerWiringTest extends TestCase
         foreach ([
             'sarissaops_enviatodo.state_processor.shop.live_rates',
             'sarissaops_enviatodo.state_processor.admin.bulk_labels',
+            'sarissaops_enviatodo.state_processor.admin.shipment_cancel',
         ] as $id) {
             $this->assertCount(1, $container->getDefinition($id)->getTag('api_platform.state_processor'), $id);
         }
+    }
+
+    public function testEligibilityCheckerAndResetterAreTagged(): void
+    {
+        $container = $this->build();
+
+        $this->assertCount(
+            1,
+            $container->getDefinition('sarissaops_enviatodo.shipping_eligibility_checker')->getTag('sylius.shipping_method_eligibility_checker'),
+        );
+        $this->assertSame(
+            [['priority' => 35]],
+            array_values($container->getDefinition('sarissaops_enviatodo.order_processor.shipping_method_reset')->getTag('sylius.order_processor')),
+        );
     }
 
     public function testExtensionExposesParametersAndValidationGroup(): void

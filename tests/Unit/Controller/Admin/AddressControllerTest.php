@@ -95,5 +95,8 @@ final class AddressControllerTest extends TestCase
         $controller = $this->controller($this->addressApi(), true, false);
 
         $this->assertSame(403, $controller->listAction(Request::create('/admin/enviatodo/addresses', 'GET'))->getStatusCode());
+        $this->assertSame(403, $controller->showAction(Request::create('/admin/enviatodo/addresses/12', 'GET'), 12)->getStatusCode());
+        $this->assertSame(403, $controller->saveAction(Request::create('/admin/enviatodo/addresses', 'POST', [], [], [], [], (string) json_encode($this->addressData())))->getStatusCode());
+        $this->assertSame(403, $controller->deleteAction(Request::create('/admin/enviatodo/addresses/12/delete', 'POST'), 12)->getStatusCode());
     }
 }
