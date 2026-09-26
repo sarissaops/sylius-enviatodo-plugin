@@ -27,6 +27,18 @@ class EnviatodoShipment
 
     public const HANDOVER_DELIVERED = 'delivered';
 
+    public const HANDOVER_CANCELLED = 'cancelled';
+
+    public const HANDOVER_IN_RETURN = 'in_return';
+
+    public const HANDOVER_INCIDENT = 'incident';
+
+    public const HANDOVER_PICKUP_PENDING = 'pickup_pending';
+
+    public const HANDOVER_PICKUP_CANCELLED = 'pickup_cancelled';
+
+    public const HANDOVER_PICKUP_RESCHEDULED = 'pickup_rescheduled';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
@@ -120,6 +132,55 @@ class EnviatodoShipment
     {
         $this->handover = self::HANDOVER_DELIVERED;
         $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * Carrier accepted the cancellation: refund lands ~7 days later, so this
+     * state means cancel-accepted-with-refund-pending, never refunded.
+     */
+    public function markCancelled(): void
+    {
+        $this->handover = self::HANDOVER_CANCELLED;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markInReturn(): void
+    {
+        $this->handover = self::HANDOVER_IN_RETURN;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * The detail keeps the raw upstream status name for ops triage.
+     */
+    public function markIncident(string $statusName): void
+    {
+        $this->handover = self::HANDOVER_INCIDENT;
+        $this->handoverDetail = $statusName;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markPickupPending(): void
+    {
+        $this->handover = self::HANDOVER_PICKUP_PENDING;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markPickupCancelled(): void
+    {
+        $this->handover = self::HANDOVER_PICKUP_CANCELLED;
+        $this->handoverDetail = null;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function markPickupRescheduled(?string $detail = null): void
+    {
+        $this->handover = self::HANDOVER_PICKUP_RESCHEDULED;
+        $this->handoverDetail = $detail;
         $this->updatedAt = new \DateTimeImmutable();
     }
 

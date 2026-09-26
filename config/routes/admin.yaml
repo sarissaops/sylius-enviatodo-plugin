@@ -105,3 +105,12 @@ sarissa_ops_sylius_enviatodo_admin_carriers:
         _controller: sarissaops_enviatodo.controller.admin.carrier::listAction
         _sylius:
             section: admin
+
+sarissa_ops_sylius_enviatodo_admin_shipment_cancel:
+    path: /admin/enviatodo/shipments/{id}/cancel
+    methods: [POST]
+    requirements: { id: '\d+' }
+    defaults:
+        _controller: sarissaops_enviatodo.controller.admin.shipment_cancel::cancelAction
+        _sylius:
+            section: admin

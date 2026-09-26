@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<resources
+    xmlns="https://api-platform.com/schema/metadata/resources-3.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://api-platform.com/schema/metadata/resources-3.0 https://api-platform.com/schema/metadata/resources-3.0.xsd"
+>
+    <resource class="SarissaOps\SyliusEnviatodoPlugin\ApiResource\CancelShipmentRequest">
+        <operations>
+            <operation
+                name="sarissaops_enviatodo_admin_shipment_cancel"
+                class="ApiPlatform\Metadata\Post"
+                uriTemplate="/admin/shipments/{shipmentId}/cancel"
+                processor="sarissaops_enviatodo.state_processor.admin.shipment_cancel"
+                output="SarissaOps\SyliusEnviatodoPlugin\ApiResource\CancelledShipmentResult"
+                status="200"
+                security="is_granted('ROLE_API_ACCESS')"
+            >
+                <denormalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:admin:shipment_cancel:write</value>
+                            </values>
+                        </value>
+                    </values>
+                </denormalizationContext>
+                <normalizationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>enviatodo:admin:shipment_cancel:show</value>
+                            </values>
+                        </value>
+                    </values>
+                </normalizationContext>
+                <validationContext>
+                    <values>
+                        <value name="groups">
+                            <values>
+                                <value>Default</value>
+                            </values>
+                        </value>
+                    </values>
+                </validationContext>
+                <extraProperties>
+                    <values>
+                        <value name="summary">Cancel an Enviatodo label for one shipment. Refund lands ~7 days later.</value>
+                    </values>
+                </extraProperties>
+                <openapi>
+                    <responses>
+                        <response status="200" description="Label cancelled, refund pending" />
+                        <response status="404" description="Shipment has no purchased label" />
+                        <response status="422" description="Cancellation rejected" />
+                        <response status="502" description="Label provider unavailable" />
+                    </responses>
+                </openapi>
+            </operation>
+        </operations>
+    </resource>
+</resources>

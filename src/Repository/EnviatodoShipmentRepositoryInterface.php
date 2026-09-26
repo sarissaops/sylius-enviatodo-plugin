@@ -12,8 +12,10 @@ interface EnviatodoShipmentRepositoryInterface
     public function findOneByShipment(ShipmentInterface $shipment): ?EnviatodoShipment;
 
     /**
-     * Finds the record for a Sylius shipment id. Never confuse with findById:
-     * that reads this table's own primary key and returns the wrong label.
+     * Finds the record for a Sylius shipment id. Never confuse with a primary
+     * key lookup: this table's own id is unrelated to shipment ids.
      */
     public function findOneByShipmentId(int $syliusShipmentId): ?EnviatodoShipment;
+
+    public function findOneByTrackingId(string $trackingId): ?EnviatodoShipment;
 }

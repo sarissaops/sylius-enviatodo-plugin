@@ -164,6 +164,23 @@
             <tag name="api_platform.state_processor" />
         </service>
 
+        <service id="sarissaops_enviatodo.state_processor.admin.shipment_cancel" class="SarissaOps\SyliusEnviatodoPlugin\State\Processor\Admin\ShipmentCancelProcessor">
+            <argument type="service" id="sarissaops_enviatodo.shipment_canceller" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="doctrine" />
+            <argument type="service" id="logger" />
+            <tag name="api_platform.state_processor" />
+        </service>
+
+        <service id="sarissaops_enviatodo.controller.admin.shipment_cancel" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\ShipmentCancelController" public="true">
+            <argument type="service" id="sarissaops_enviatodo.shipment_canceller" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="doctrine" />
+            <argument type="service" id="security.csrf.token_manager" />
+            <argument type="service" id="security.authorization_checker" />
+            <tag name="controller.service_arguments" />
+        </service>
+
         <service id="sarissaops_enviatodo.guide_api" class="SarissaOps\Enviatodo\Api\GuideApi">
             <factory service="SarissaOps\Enviatodo\Enviatodo" method="guide" />
         </service>
@@ -175,6 +192,21 @@
         <service id="sarissaops_enviatodo.shipment_canceller" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\ShipmentCanceller">
             <argument type="service" id="sarissaops_enviatodo.order_api" />
             <argument type="service" id="logger" />
+        </service>
+
+        <service id="sarissaops_enviatodo.status_map" class="SarissaOps\SyliusEnviatodoPlugin\Component\Shipping\StatusMap" />
+
+        <service id="sarissaops_enviatodo.status_synchronizer" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoStatusSynchronizer">
+            <argument type="service" id="sarissaops_enviatodo.order_api" />
+            <argument type="service" id="sarissaops_enviatodo.status_map" />
+            <argument type="service" id="sarissaops_enviatodo.repository.shipment" />
+            <argument type="service" id="doctrine" />
+            <argument type="service" id="logger" />
+        </service>
+
+        <service id="sarissaops_enviatodo.command.sync_statuses" class="SarissaOps\SyliusEnviatodoPlugin\Command\SyncEnviatodoStatusesCommand">
+            <argument type="service" id="sarissaops_enviatodo.status_synchronizer" />
+            <tag name="console.command" />
         </service>
 
         <service id="sarissaops_enviatodo.controller.admin.shipment_bulk" class="SarissaOps\SyliusEnviatodoPlugin\Controller\Admin\ShipmentBulkController" public="true">
