@@ -19,12 +19,12 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 final class PickupControllerTest extends TestCase
 {
-    private function controller(PickupApi $pickupApi, bool $csrfValid): PickupController
+    private function controller(PickupApi $pickupApi, bool $csrfValid, bool $admin = true): PickupController
     {
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
         $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
-        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn($admin);
         $user = $this->createMock(UserInterface::class);
         $user->method('getUserIdentifier')->willReturn('admin-1');
         $security = $this->createMock(Security::class);
@@ -116,5 +116,19 @@ final class PickupControllerTest extends TestCase
 
         $this->assertSame(403, $this->controller($this->pickupData(), false)->cancelAction($request, 29114)->getStatusCode());
         $this->assertSame(400, $this->controller($this->pickupData(), true)->cancelAction($request, 29114)->getStatusCode());
+    }
+
+    public function testCreateActionRejectsInvalidCsrfTokens(): void
+    {
+        $request = Request::create('/admin/enviatodo/pickups', 'POST', [], [], [], [], (string) json_encode([]));
+
+        $this->assertSame(403, $this->controller($this->pickupData(), false)->createAction($request)->getStatusCode());
+    }
+
+    public function testActionsForbidNonAdministrators(): void
+    {
+        $request = Request::create('/admin/enviatodo/pickups/queue?providers=9', 'GET');
+
+        $this->assertSame(403, $this->controller($this->pickupData(), true, false)->queueAction($request)->getStatusCode());
     }
 }

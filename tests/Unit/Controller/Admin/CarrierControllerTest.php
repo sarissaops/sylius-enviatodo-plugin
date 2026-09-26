@@ -52,4 +52,17 @@ final class CarrierControllerTest extends TestCase
         $productTypes = $data['product_types'];
         $this->assertSame(['01010101' => 'Generic goods'], $productTypes);
     }
+
+    public function testListActionForbidsNonAdministrators(): void
+    {
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(false);
+
+        $response = (new CarrierController(
+            new EnviatodoCarrierCatalog($this->createMock(ParcelApi::class), $this->createMock(CatalogApi::class)),
+            $authorizationChecker,
+        ))->listAction(Request::create('/admin/enviatodo/carriers', 'GET'));
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
 }

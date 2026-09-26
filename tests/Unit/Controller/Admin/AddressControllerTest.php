@@ -87,6 +87,7 @@ final class AddressControllerTest extends TestCase
         $request = Request::create('/admin/enviatodo/addresses', 'POST', [], [], [], [], (string) json_encode($this->addressData()));
 
         $this->assertSame(403, $controller->saveAction($request)->getStatusCode());
+        $this->assertSame(403, $controller->deleteAction(Request::create('/admin/enviatodo/addresses/12/delete', 'POST'), 12)->getStatusCode());
     }
 
     public function testActionsForbidNonAdministrators(): void

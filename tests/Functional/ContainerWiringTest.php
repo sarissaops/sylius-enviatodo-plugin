@@ -132,7 +132,7 @@ final class ContainerWiringTest extends TestCase
     {
         $container = $this->build();
 
-        foreach (['token', 'endpoint', 'provider_map', 'insurance', 'pickup_auto_schedule', 'ui_enabled'] as $key) {
+        foreach (['provider_map', 'insurance', 'pickup_auto_schedule', 'ui_enabled'] as $key) {
             $this->assertTrue($container->hasParameter('sarissa_ops_sylius_enviatodo.' . $key), $key);
         }
         $this->assertSame(

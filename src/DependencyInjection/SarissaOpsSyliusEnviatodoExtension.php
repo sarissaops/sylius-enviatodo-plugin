@@ -19,14 +19,6 @@ final class SarissaOpsSyliusEnviatodoExtension extends AbstractResourceExtension
     {
         $config = $this->processConfiguration($this->getConfiguration([], $container), $configs);
 
-        foreach (['token', 'endpoint', 'api_key', 'app_name'] as $key) {
-            $value = $config[$key] ?? null;
-            if (!is_string($value)) {
-                throw new \InvalidArgumentException(sprintf('The "%s" option must be a string.', $key));
-            }
-            $container->setParameter('sarissa_ops_sylius_enviatodo.' . $key, $value);
-        }
-
         foreach (['origin_address_id', 'default_package_id'] as $key) {
             $value = $config[$key] ?? null;
             if (!is_int($value) && null !== $value) {
@@ -42,12 +34,6 @@ final class SarissaOpsSyliusEnviatodoExtension extends AbstractResourceExtension
             }
             $container->setParameter('sarissa_ops_sylius_enviatodo.' . $key, $value);
         }
-
-        $allowlist = $config['provider_allowlist'] ?? null;
-        if (!is_array($allowlist)) {
-            throw new \InvalidArgumentException('The "provider_allowlist" option must be an array.');
-        }
-        $container->setParameter('sarissa_ops_sylius_enviatodo.provider_allowlist', $allowlist);
 
         $providerMap = $config['provider_map'] ?? null;
         if (!is_array($providerMap)) {

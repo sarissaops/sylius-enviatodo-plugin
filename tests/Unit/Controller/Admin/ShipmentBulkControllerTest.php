@@ -29,7 +29,7 @@ final class ShipmentBulkControllerTest extends TestCase
     }
 
     /** @return array{EnviatodoShipmentRepositoryInterface, ShipmentBulkController} */
-    private function controller(bool $csrfValid): array
+    private function controller(bool $csrfValid, bool $admin = true): array
     {
         $repository = $this->createMock(EnviatodoShipmentRepositoryInterface::class);
         $guideApi = $this->createMock(GuideApi::class);
@@ -40,7 +40,7 @@ final class ShipmentBulkControllerTest extends TestCase
         $csrf = $this->createMock(CsrfTokenManagerInterface::class);
         $csrf->method('isTokenValid')->willReturn($csrfValid);
         $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
-        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn(true);
+        $authorizationChecker->method('isGranted')->with('ROLE_ADMINISTRATION_ACCESS')->willReturn($admin);
 
         return [$repository, new ShipmentBulkController(new EnviatodoLabelService($guideApi), $repository, $csrf, new NullLogger(), $authorizationChecker)];
     }
@@ -76,5 +76,13 @@ final class ShipmentBulkControllerTest extends TestCase
         $badJson = Request::create('/admin/enviatodo/shipments/bulk-labels', 'POST', [], [], [], [], '{nope');
 
         $this->assertSame(400, $validController->bulkLabelsAction($badJson)->getStatusCode());
+    }
+
+    public function testBulkLabelsForbidsNonAdministrators(): void
+    {
+        [, $controller] = $this->controller(true, false);
+        $request = Request::create('/admin/enviatodo/shipments/bulk-labels', 'POST', [], [], [], [], (string) json_encode(['shipment_ids' => [1]]));
+
+        $this->assertSame(403, $controller->bulkLabelsAction($request)->getStatusCode());
     }
 }

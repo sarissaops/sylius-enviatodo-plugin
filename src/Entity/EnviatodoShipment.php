@@ -14,6 +14,7 @@ use Sylius\Component\Shipping\Model\ShipmentInterface;
  */
 #[ORM\Entity(repositoryClass: EnviatodoShipmentRepository::class)]
 #[ORM\Table(name: 'sarissaops_enviatodo_shipment')]
+#[ORM\Index(name: 'IDX_ENVSHIP_TRACKING', columns: ['tracking_id'])]
 class EnviatodoShipment
 {
     public const HANDOVER_LABEL_CREATED = 'label_created';

@@ -93,5 +93,6 @@ final class PackageControllerTest extends TestCase
         $request = Request::create('/admin/enviatodo/packages', 'POST', [], [], [], [], (string) json_encode($this->packageData()));
 
         $this->assertSame(403, $controller->saveAction($request)->getStatusCode());
+        $this->assertSame(403, $controller->deleteAction(Request::create('/admin/enviatodo/packages/5/delete', 'POST'), 5)->getStatusCode());
     }
 }

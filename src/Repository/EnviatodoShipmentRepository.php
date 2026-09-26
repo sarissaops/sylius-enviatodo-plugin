@@ -19,13 +19,6 @@ final class EnviatodoShipmentRepository extends ServiceEntityRepository implemen
         parent::__construct($registry, EnviatodoShipment::class);
     }
 
-    public function findById(int $id): ?EnviatodoShipment
-    {
-        $found = $this->find($id);
-
-        return $found instanceof EnviatodoShipment ? $found : null;
-    }
-
     public function findOneByShipment(ShipmentInterface $shipment): ?EnviatodoShipment
     {
         $found = $this->findOneBy(['shipment' => $shipment]);
