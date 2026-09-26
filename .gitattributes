@@ -1,0 +1,9 @@
+/behat.yml.dist export-ignore
+/drivers export-ignore
+/ecs.php export-ignore
+/etc export-ignore
+/features export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/tests export-ignore
+/var export-ignore

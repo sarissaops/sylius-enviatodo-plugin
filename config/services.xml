@@ -39,6 +39,11 @@
             <tag name="sylius.shipping_method_eligibility_checker" />
         </service>
 
+        <service id="sarissaops_enviatodo.order_processor.shipping_method_reset" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoShippingMethodResetter">
+            <argument type="service" id="sarissaops_enviatodo.shipping_eligibility_checker" />
+            <tag name="sylius.order_processor" priority="35" />
+        </service>
+
         <service id="sarissaops_enviatodo.validator.method_available" class="SarissaOps\SyliusEnviatodoPlugin\Validator\Constraints\EnviatodoMethodAvailableValidator">
             <argument type="service" id="sarissaops_enviatodo.zip_code_api" />
             <argument type="service" id="sarissaops_enviatodo.provider_map" />
