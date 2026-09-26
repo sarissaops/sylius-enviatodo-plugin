@@ -265,12 +265,22 @@ final class EnviatodoOrderManagerTest extends TestCase
         ];
     }
 
-    public function testPurchaseForPaidShipmentBuysWithAFreshQuote(): void
+    private function purchaseEntityManager(?EnviatodoShipment $draft): EntityManagerInterface
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $repository = $this->createMock(\Doctrine\ORM\EntityRepository::class);
-        $repository->method('findOneBy')->willReturn(null);
+        $repository->method('findOneBy')->willReturn($draft);
         $entityManager->method('getRepository')->willReturn($repository);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static function (callable $operation): mixed {
+            return $operation();
+        });
+
+        return $entityManager;
+    }
+
+    public function testPurchaseForPaidShipmentBuysWithAFreshQuote(): void
+    {
+        $entityManager = $this->purchaseEntityManager(null);
         $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
         $entityManager->expects($this->once())->method('persist');
 
@@ -281,12 +291,9 @@ final class EnviatodoOrderManagerTest extends TestCase
 
     public function testPurchaseForPaidShipmentSkipsCompletedDrafts(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
         $draft = new EnviatodoShipment($this->shipment(), 'uuid-old', '9', '11');
         $draft->complete('TRK0', 100);
-        $repository = $this->createMock(\Doctrine\ORM\EntityRepository::class);
-        $repository->method('findOneBy')->willReturn($draft);
-        $entityManager->method('getRepository')->willReturn($repository);
+        $entityManager = $this->purchaseEntityManager($draft);
         $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
 
         $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
@@ -296,10 +303,7 @@ final class EnviatodoOrderManagerTest extends TestCase
 
     public function testPurchaseForPaidShipmentRefusesInsufficientBalance(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $repository = $this->createMock(\Doctrine\ORM\EntityRepository::class);
-        $repository->method('findOneBy')->willReturn(null);
-        $entityManager->method('getRepository')->willReturn($repository);
+        $entityManager = $this->purchaseEntityManager(null);
         $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 5.0, $this->createdData());
         $entityManager->expects($this->never())->method('persist');
 
@@ -310,10 +314,7 @@ final class EnviatodoOrderManagerTest extends TestCase
 
     public function testPurchaseForPaidShipmentRejectsEmptyTracking(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $repository = $this->createMock(\Doctrine\ORM\EntityRepository::class);
-        $repository->method('findOneBy')->willReturn(null);
-        $entityManager->method('getRepository')->willReturn($repository);
+        $entityManager = $this->purchaseEntityManager(null);
         $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, [
             'summary' => ['sub_total' => '200.00', 'tax' => '32.00', 'total' => '232.00'],
             'guides' => [['id' => 'g1', 'insured' => false, 'tracking_id' => '', 'provider_id' => '9']],
@@ -322,5 +323,18 @@ final class EnviatodoOrderManagerTest extends TestCase
         $this->expectException(EnviatodoOrderException::class);
 
         $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
+    }
+
+    public function testPurchaseForPaidShipmentRunsInsideATransaction(): void
+    {
+        $entityManager = $this->purchaseEntityManager(null);
+        $entityManager->expects($this->once())->method('wrapInTransaction')->willReturnCallback(static function (callable $operation): mixed {
+            return $operation();
+        });
+        $manager = $this->purchaseManager($entityManager, Quote::create($this->quoteData()), 1000.0, $this->createdData());
+
+        $manager->purchaseForPaidShipment($this->paidShipment(), $this->quoteConfig());
+
+        $this->addToAssertionCount(1);
     }
 }

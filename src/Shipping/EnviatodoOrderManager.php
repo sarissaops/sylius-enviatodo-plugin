@@ -111,57 +111,65 @@ final class EnviatodoOrderManager implements EnviatodoOrderManagerInterface
         $contact = ShipmentContact::fromShipment($shipment, ShipmentContact::fallbackTelephone($quote));
 
         $manager = $this->entityManager();
-        $draft = $manager->getRepository(EnviatodoShipment::class)->findOneBy(['shipment' => $shipment]);
-        if (null !== $draft) {
-            $manager->lock($draft, LockMode::PESSIMISTIC_WRITE);
-            if ($draft->isCompleted()) {
-                return;
+
+        // One transaction around find, lock, quote, guard, and buy: the row
+        // lock is only legal inside a transaction, and holding it across the
+        // billable create_order is what makes duplicate payment events safe.
+        // Pay transitions are rare; a per-row lock for seconds is the price
+        // of exactly-once label purchase without an idempotency key.
+        $manager->wrapInTransaction(function () use ($manager, $shipment, $mapping, $quote, $contact): void {
+            $draft = $manager->getRepository(EnviatodoShipment::class)->findOneBy(['shipment' => $shipment]);
+            if (null !== $draft) {
+                $manager->lock($draft, LockMode::PESSIMISTIC_WRITE);
+                if ($draft->isCompleted()) {
+                    return;
+                }
             }
-        }
 
-        $quoted = $this->calculator->quoteForAddress($quote, $contact, $mapping['provider_id'], $mapping['provider_service_id']);
-        $uuid = trim($quoted->getTransactionUuid());
-        if ('' === $uuid) {
-            throw new EnviatodoOrderException('Enviatodo answered without a quote uuid; the label was not purchased.');
-        }
-        $expectedMinor = null;
-        foreach ($quoted->getRates() as $rate) {
-            if ($rate->getProviderId() === $mapping['provider_id'] && $rate->getProviderServiceId() === $mapping['provider_service_id']) {
-                $expectedMinor = $rate->getAmountMinor();
-
-                break;
+            $quoted = $this->calculator->quoteForAddress($quote, $contact, $mapping['provider_id'], $mapping['provider_service_id']);
+            $uuid = trim($quoted->getTransactionUuid());
+            if ('' === $uuid) {
+                throw new EnviatodoOrderException('Enviatodo answered without a quote uuid; the label was not purchased.');
             }
-        }
-        if (null === $expectedMinor) {
-            throw new EnviatodoOrderException('Enviatodo has no rate for the paid shipment; the label was not purchased.');
-        }
+            $expectedMinor = null;
+            foreach ($quoted->getRates() as $rate) {
+                if ($rate->getProviderId() === $mapping['provider_id'] && $rate->getProviderServiceId() === $mapping['provider_service_id']) {
+                    $expectedMinor = $rate->getAmountMinor();
 
-        $balance = $this->balanceApi->show();
-        if (!$balance instanceof Balance) {
-            throw new \RuntimeException('BalanceApi must hydrate Balance models for the pre-purchase guard.');
-        }
-        if ($balance->getBalance() < $expectedMinor / 100) {
-            throw new EnviatodoOrderException('Enviatodo balance cannot cover the label; the label was not purchased.');
-        }
+                    break;
+                }
+            }
+            if (null === $expectedMinor) {
+                throw new EnviatodoOrderException('Enviatodo has no rate for the paid shipment; the label was not purchased.');
+            }
 
-        if (null === $draft) {
-            $draft = new EnviatodoShipment($shipment, $uuid, $mapping['provider_id'], $mapping['provider_service_id']);
-            $manager->persist($draft);
-        } else {
-            $draft->refreshQuote($uuid, $mapping['provider_id'], $mapping['provider_service_id']);
-        }
+            $balance = $this->balanceApi->show();
+            if (!$balance instanceof Balance) {
+                throw new \RuntimeException('BalanceApi must hydrate Balance models for the pre-purchase guard.');
+            }
+            if ($balance->getBalance() < $expectedMinor / 100) {
+                throw new EnviatodoOrderException('Enviatodo balance cannot cover the label; the label was not purchased.');
+            }
 
-        $created = $this->orderApi->create($uuid, $mapping['provider_id'], $mapping['provider_service_id'], $this->insurance);
-        if (!$created instanceof OrderCreated) {
-            throw new \RuntimeException('OrderApi must hydrate OrderCreated models for label purchase.');
-        }
-        $guide = $this->firstGuide($created);
+            if (null === $draft) {
+                $draft = new EnviatodoShipment($shipment, $uuid, $mapping['provider_id'], $mapping['provider_service_id']);
+                $manager->persist($draft);
+            } else {
+                $draft->refreshQuote($uuid, $mapping['provider_id'], $mapping['provider_service_id']);
+            }
 
-        $draft->complete($guide->getTrackingId(), (int) round($created->getSummary()->getTotal() * 100));
-        $draft->setGuideId($guide->getId());
-        $manager->flush();
+            $created = $this->orderApi->create($uuid, $mapping['provider_id'], $mapping['provider_service_id'], $this->insurance);
+            if (!$created instanceof OrderCreated) {
+                throw new \RuntimeException('OrderApi must hydrate OrderCreated models for label purchase.');
+            }
+            $guide = $this->firstGuide($created);
 
-        $this->logger->info('Enviatodo label purchased.', ['tracking_id' => $guide->getTrackingId()]);
+            $draft->complete($guide->getTrackingId(), (int) round($created->getSummary()->getTotal() * 100));
+            $draft->setGuideId($guide->getId());
+            $manager->flush();
+
+            $this->logger->info('Enviatodo label purchased.', ['tracking_id' => $guide->getTrackingId()]);
+        });
     }
 
     private function firstGuide(OrderCreated $created): Guide
