@@ -83,7 +83,7 @@ final class ContainerWiringTest extends TestCase
             'sarissaops_enviatodo.state_processor.admin.shipment_cancel',
             'sarissaops_enviatodo.controller.admin.shipment_cancel',
         ] as $id) {
-            $this->assertTrue($container->hasDefinition($id), $id);
+            $this->assertTrue($container->hasDefinition($id) || $container->hasAlias($id), $id);
         }
     }
 

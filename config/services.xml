@@ -58,9 +58,12 @@
             <factory service="SarissaOps\Enviatodo\Enviatodo" method="balance" />
         </service>
 
-        <service id="sarissaops_enviatodo.repository.shipment" class="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepository">
+        <service id="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepository" class="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepository">
             <argument type="service" id="doctrine" />
+            <tag name="doctrine.repository_service" />
         </service>
+
+        <service id="sarissaops_enviatodo.repository.shipment" alias="SarissaOps\SyliusEnviatodoPlugin\Repository\EnviatodoShipmentRepository" />
 
         <service id="sarissaops_enviatodo.order_manager" class="SarissaOps\SyliusEnviatodoPlugin\Shipping\EnviatodoOrderManager">
             <argument type="service" id="sarissaops_enviatodo.order_api" />
