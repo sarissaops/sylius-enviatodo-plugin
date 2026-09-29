@@ -408,7 +408,7 @@ controllers (static Bearer needs only a validate/reconnect check on admin
   document it in README. Hook names are theme-stable; emission depends on the
   theme keeping `{% hook %}` tags (inherent to the hooks design, not our bug).
 
-## 14. Known-remaining API gaps (headless audit — P0/P1 done, one test open)
+## 14. Known-remaining API gaps (headless audit — all done)
 
 - P0 scope the shop lookup: DONE — `fromProperty="order"` on `shipmentId`,
   cart-only scoped query + channel + `STATE_CART` checks in
@@ -418,6 +418,7 @@ controllers (static Bearer needs only a validate/reconnect check on admin
   200/404/422/502 on both ops.
 - P1 explicit `<validationContext>` (group `Default`), `Positive` on quantity
   and ids, `status="200"` on the shop op: DONE.
-- P1 nested-schema render test: OPEN — groups cascade correctly by construction
-  (nested scalars repeat the `show` group), but no test asserts nested
-  `rates[]`/`files[]` render under it.
+- P1 nested-schema render test: DONE — `tests/Unit/ApiResource/SerializationGroupsTest.php`
+  (added in `82b98c8`) asserts nested `rates[]` render under
+  `enviatodo:shop:live_rates:show` (and vanish under foreign groups) plus nested
+  `files[]`/`invalidFiles[]` under `enviatodo:admin:bulk_labels:show`; green.
