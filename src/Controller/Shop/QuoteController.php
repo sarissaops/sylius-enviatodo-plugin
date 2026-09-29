@@ -53,14 +53,15 @@ final class QuoteController
             return new JsonResponse(['error' => 'invalid_payload'], Response::HTTP_BAD_REQUEST);
         }
         $order = $this->orderRepository->findOneBy(['tokenValue' => $cartToken]);
+
         try {
             $channelCode = $this->channelContext->getChannel()->getCode();
         } catch (\Exception) {
             return new JsonResponse(['error' => 'cart_not_found'], Response::HTTP_NOT_FOUND);
         }
-        if (!$order instanceof OrderInterface
-            || $order->getChannel()?->getCode() !== $channelCode
-            || $order->getCheckoutState() !== OrderCheckoutStates::STATE_CART
+        if (!$order instanceof OrderInterface ||
+            $order->getChannel()?->getCode() !== $channelCode ||
+            $order->getCheckoutState() !== OrderCheckoutStates::STATE_CART
         ) {
             return new JsonResponse(['error' => 'cart_not_found'], Response::HTTP_NOT_FOUND);
         }

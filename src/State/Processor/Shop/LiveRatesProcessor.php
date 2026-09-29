@@ -65,6 +65,7 @@ final class LiveRatesProcessor implements ProcessorInterface
         if (!$order instanceof OrderInterface) {
             throw new NotFoundHttpException('Order not found.');
         }
+
         try {
             $requestChannelCode = $this->channelContext->getChannel()->getCode();
         } catch (\Exception $exception) {
