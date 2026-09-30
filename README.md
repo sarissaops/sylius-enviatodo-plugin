@@ -8,125 +8,98 @@
     </a>
 </p>
 
-<h1 align="center">Plugin Skeleton</h1>
+<h1 align="center">Sylius Enviatodo Plugin</h1>
 
-<p align="center">Skeleton for starting Sylius plugins.</p>
+<p align="center">Enviatodo shipping for Sylius 2.x: live quotes at checkout, label purchase after payment, tracking, pickups and branch drop-off.</p>
 
-## Documentation
+## Requirements
 
-For a comprehensive guide on Sylius Plugins development please go to Sylius documentation,
-there you will find the <a href="https://docs.sylius.com/plugins-development-guide/how-to-create-a-plugin-for-sylius">Plugin Development Guide</a> - it's a great place to start.
+- PHP `^8.2`
+- Sylius `^2.1` (Symfony `^7.4`)
+- `sarissaops/enviatodo-bundle ^0.1` (pulled in automatically)
+- An Enviatodo API token (JWT), passed via environment — never committed
 
-For more information about the **Test Application** included in the skeleton, please refer to the [Sylius documentation](https://docs.sylius.com/plugins-development-guide/test-application).
+## Installation
 
-## Quickstart Installation
-
-Run `composer create-project sylius/plugin-skeleton ProjectName`.
-
-### Traditional
-
-1. From the plugin skeleton root directory, run the following commands:
+1. Require the plugin:
 
     ```bash
-    (cd vendor/sylius/test-application && yarn install)
-    (cd vendor/sylius/test-application && yarn build)
-    vendor/bin/console assets:install
-   
-    vendor/bin/console doctrine:database:create
+    composer require sarissaops/sylius-enviatodo-plugin
+    ```
+
+2. Register both bundles in `config/bundles.php` (Flex usually does this for you):
+
+    ```php
+    SarissaOps\EnviatodoBundle\EnviatodoBundle::class => ['all' => true],
+    SarissaOps\SyliusEnviatodoPlugin\SarissaOpsSyliusEnviatodoPlugin::class => ['all' => true],
+    ```
+
+3. Expose the token (the only secret; the only supported channel is the environment):
+
+    ```bash
+    ENVIATODO_TOKEN=your-jwt-here bin/console about
+    ```
+
+4. Add `config/packages/sylius_enviatodo.yaml`:
+
+    ```yaml
+    imports:
+        - { resource: "@SarissaOpsSyliusEnviatodoPlugin/config/config.yaml" }
+        # Optional: admin order-tracking panel (skip for headless — every JSON
+        # controller and API Platform operation works without Twig).
+        - { resource: "@SarissaOpsSyliusEnviatodoPlugin/config/twig_hooks/admin.yaml" }
+
+    sarissa_ops_sylius_enviatodo:
+        provider_map:
+            # shipping-method code => Enviatodo carrier + service
+            enviatodo_estafeta: { provider_id: '9', provider_service_id: '11' }
+    ```
+
+    Optional keys (all default to off/empty): `origin_address_id`, `default_package_id`
+    (integers), `insurance: false`, `pickup_auto_schedule: false`.
+
+5. Import the routes in `config/routes/sylius_enviatodo.yaml`:
+
+    ```yaml
+    sarissa_ops_sylius_enviatodo_admin:
+        resource: "@SarissaOpsSyliusEnviatodoPlugin/config/routes/admin.yaml"
+
+    sarissa_ops_sylius_enviatodo_shop:
+        resource: "@SarissaOpsSyliusEnviatodoPlugin/config/routes/shop.yaml"
+    ```
+
+6. Run the plugin migrations, then load data as usual:
+
+    ```bash
     vendor/bin/console doctrine:migrations:migrate -n
-    # Optionally load data fixtures
-    vendor/bin/console sylius:fixtures:load -n
+    vendor/bin/console sylius:fixtures:load -n   # dev/test only
     ```
 
-To be able to set up a plugin's database, remember to configure your database credentials in `tests/TestApplication/.env` and `tests/TestApplication/.env.test`.
+7. In the Sylius admin, create a shipping method per carrier entry in your
+   `provider_map` with calculator **"Enviatodo (live rates)"**. Unmapped codes are
+   hidden automatically; unquotable destinations are gated by zip-code lookup.
 
-2. Run your local server:
+## What you get
 
-      ```bash
-      symfony server:ca:install
-      symfony server:start -d
-      ```
+- **Checkout quotes** — live `rates_client` rates per Enviatodo-backed method; the
+  chosen quote `uuid` is held (draft) and spent once, after payment.
+- **Label purchase** — `OrderPaidListener` checks balance, calls `create_order`,
+  persists tracking/guide/amounts. Print single labels or bulk-export binaries
+  (per-file `invalid_files[]` retry).
+- **Tracking & status sync** — admin order panel + `SyncEnviatodoStatusesCommand`;
+  cancel flows to a *pending* (+7 days refund) state.
+- **Fulfilment, three paths** — scheduled carrier pickup (`add_pickup`/cancel),
+  merchant branch drop-off (local handover state, no API call), poll-based delivery
+  status (`41→42→44` happy path, `59` in-pickup, `68/69` return/incident).
+- **Master data** — origin address book, parcel templates, carrier catalog, SAT-shaped
+  dropdowns, checkout defaults.
+- **Headless API** — `POST /api/v2/shop/orders/{token}/shipments/{id}/live-rates`,
+  `POST /api/v2/admin/shipments/bulk-labels`,
+  `POST /api/v2/admin/shipments/{id}/cancel` (synchronous, no Messenger).
 
-3. Open your browser and navigate to `https://localhost:8000`.
-
-### Docker
-
-1. Execute `make init` to initialize the container and install the dependencies.
-
-2. Execute `make database-init` to create the database and run migrations.
-
-3. (Optional) Execute `make load-fixtures` to load the fixtures.
-
-4. Your app is available at `http://localhost`.
-
-## Usage
-
-### Running plugin tests
-
-  - PHPUnit
-
-    ```bash
-    vendor/bin/phpunit
-    ```
-
-  - Behat (non-JS scenarios)
-
-    ```bash
-    vendor/bin/behat --strict --tags="~@javascript&&~@mink:chromedriver"
-    ```
-
-  - Behat (JS scenarios)
- 
-    1. [Install Symfony CLI command](https://symfony.com/download).
- 
-    2. Start Headless Chrome:
-    
-      ```bash
-      google-chrome-stable --enable-automation --disable-background-networking --no-default-browser-check --no-first-run --disable-popup-blocking --disable-default-apps --allow-insecure-localhost --disable-translate --disable-extensions --no-sandbox --enable-features=Metal --headless --remote-debugging-port=9222 --window-size=2880,1800 --proxy-server='direct://' --proxy-bypass-list='*' http://127.0.0.1
-      ```
-    
-    3. Install SSL certificates (only once needed) and run test application's webserver on `127.0.0.1:8080`:
-    
-      ```bash
-      symfony server:ca:install
-      APP_ENV=test symfony server:start --port=8080 --daemon
-      ```
-    
-    4. Run Behat:
-    
-      ```bash
-      vendor/bin/behat --strict --tags="@javascript,@mink:chromedriver"
-      ```
-    
-  - Static Analysis
-      
-    - PHPStan
-    
-      ```bash
-      vendor/bin/phpstan analyse -c phpstan.neon -l max src/  
-      ```
-
-  - Coding Standard
-  
-    ```bash
-    vendor/bin/ecs check
-    ```
-
-### Opening Sylius with your plugin
-
-- Using `test` environment:
-
-    ```bash
-    APP_ENV=test vendor/bin/console sylius:fixtures:load -n
-    APP_ENV=test symfony server:start -d
-    ```
-    
-- Using `dev` environment:
-
-    ```bash
-    vendor/bin/console sylius:fixtures:load -n
-    symfony server:start -d
-    ```
+All Enviatodo traffic goes through the autowired `SarissaOps\Enviatodo\Enviatodo`
+facade from `sarissaops/enviatodo-bundle`. See `enviatodo/docs/Enviatodo Api V2.json`
+(upstream collection) for the raw API contract.
 
 ## Theming and headless usage
 
@@ -138,3 +111,15 @@ to `<theme>/templates/bundles/SarissaOpsSyliusEnviatodoPlugin/admin/order/tracki
 — note the literal `Plugin` suffix, no `Bundle` appended. For headless
 deployments, skip the `twig_hooks` import entirely: all JSON controllers and
 API Platform operations work without Twig installed.
+
+## Development
+
+```bash
+composer validate
+vendor/bin/phpunit --testsuite=unit
+vendor/bin/phpstan analyse -c phpstan.neon -l max src/
+vendor/bin/ecs check
+vendor/bin/behat --strict --tags="~@javascript&&~@mink:chromedriver&&~@enviatodo_live"
+```
+
+See `plan.md` (§5 architecture, §8 gates, §13 live lessons) for the build record.
