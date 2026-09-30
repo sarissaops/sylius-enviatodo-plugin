@@ -7,3 +7,10 @@
 /phpunit.xml.dist export-ignore
 /tests export-ignore
 /var export-ignore
+# Build-record and skeleton working docs — not for consumers.
+/plan.md export-ignore
+/CLAUDE.md export-ignore
+/AGENTS.md export-ignore
+/CLEANUP_GUIDE.md export-ignore
+/COMPATIBILITY_GUIDE.md export-ignore
+/RENAME_GUIDE.md export-ignore
